@@ -48,4 +48,3 @@ jobs:
             find /home/eservices/htdocs/eservices.com -type f -exec chmod 664 {} \;
             nginx -t
             systemctl reload nginx
-            
