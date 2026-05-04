@@ -217,7 +217,8 @@ router.beforeEach((to, from, next) => {
 
     // Verificar acceso al módulo
     if (to.meta.module) {
-      const hasAccess = isSuperAdmin || (user?.permissions?.[to.meta.module] === true);
+      const perm      = user?.permissions?.[to.meta.module];
+      const hasAccess = isSuperAdmin || (perm && (typeof perm === 'boolean' ? perm : perm.enabled === true));
       if (!hasAccess) {
         console.warn(`Sin acceso al módulo: ${to.meta.module}`);
         return next({ name: 'DashboardAdmin' });
