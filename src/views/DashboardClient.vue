@@ -152,7 +152,7 @@ const sidebarOpen = ref(false)
 
 const currentDate = computed(() =>
   new Date().toLocaleDateString(
-    'es-PE',
+    'es-CO',
     {
       weekday:'long',
       year:'numeric',
