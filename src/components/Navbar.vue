@@ -1,330 +1,122 @@
 <template>
   <nav class="navbar">
-    <div class="navbar-background"></div>
-    <div class="container">
-      <div class="navbar-content">
-        <a href="/" class="logo">
-          <img src="/images/logo-services-sin-fondo.png" alt="logo" class="logo-img" />
-        </a>
-        <div class="nav-links">
-          <a href="#services">Servicios</a>
-          <a href="#professionals">Profesionales</a>
-          <a href="#about">Nosotros</a>
-          <a href="#contact">Contacto</a>
-        </div>
-        <div class="nav-actions">
-          <a href="/login" class="nav-login">Iniciar Sesión</a>
-          <a href="/login?register=true" class="nav-cta">Registrarse</a>
-        </div>
+    <div class="nav-inner">
+      <!-- Logo -->
+      <a href="/" class="logo">
+        <img src="/images/logo-services-sin-fondo.png" alt="e-service" class="logo-img" />
+      </a>
 
-        <!-- Mobile Menu Button -->
-        <button class="mobile-menu-btn" @click="toggleMobileMenu">
-          <span class="menu-icon">{{ mobileMenuOpen ? '✕' : '☰' }}</span>
-        </button>
+      <!-- Links desktop -->
+      <div class="nav-links">
+        <a href="#" class="nav-link active">Inicio</a>
+        <a href="#services" class="nav-link">Explorar servicios</a>
+        <a href="#how" class="nav-link">Cómo funciona</a>
+        <a href="#pricing" class="nav-link">Precios</a>
+        <a href="#contact" class="nav-link">Contacto</a>
       </div>
 
-      <!-- Mobile Menu -->
-      <transition name="slide-down">
-        <div v-if="mobileMenuOpen" class="mobile-menu">
-          <a href="#services" @click="closeMobileMenu">Servicios</a>
-          <a href="#professionals" @click="closeMobileMenu">Profesionales</a>
-          <a href="#about" @click="closeMobileMenu">Nosotros</a>
-          <a href="#contact" @click="closeMobileMenu">Contacto</a>
-          <div class="mobile-menu-actions">
-            <a href="/login" class="mobile-login">Iniciar Sesión</a>
-            <a href="/login?register=true" class="mobile-register">Registrarse</a>
-          </div>
-        </div>
-      </transition>
+      <!-- Actions -->
+      <div class="nav-actions">
+        <a href="/login" class="btn-login">Iniciar sesión</a>
+        <a href="/login?register=true" class="btn-register">Regístrate</a>
+      </div>
+
+      <!-- Hamburger -->
+      <button class="hamburger" @click="open = !open" :aria-expanded="open">
+        <span :class="['bar', { open }]"></span>
+        <span :class="['bar', { open }]"></span>
+        <span :class="['bar', { open }]"></span>
+      </button>
     </div>
+
+    <!-- Mobile menu -->
+    <Transition name="slide">
+      <div v-if="open" class="mobile-menu">
+        <a href="#" class="mob-link" @click="open=false">Inicio</a>
+        <a href="#services" class="mob-link" @click="open=false">Explorar servicios</a>
+        <a href="#how" class="mob-link" @click="open=false">Cómo funciona</a>
+        <a href="#pricing" class="mob-link" @click="open=false">Precios</a>
+        <a href="#contact" class="mob-link" @click="open=false">Contacto</a>
+        <div class="mob-actions">
+          <a href="/login" class="btn-login">Iniciar sesión</a>
+          <a href="/login?register=true" class="btn-register">Regístrate</a>
+        </div>
+      </div>
+    </Transition>
   </nav>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-
-const mobileMenuOpen = ref(false);
-
-const toggleMobileMenu = () => {
-  mobileMenuOpen.value = !mobileMenuOpen.value;
-};
-
-const closeMobileMenu = () => {
-  mobileMenuOpen.value = false;
-};
+import { ref } from 'vue'
+const open = ref(false)
 </script>
 
 <style scoped>
 .navbar {
-  position: fixed;
-  width: 100%;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  padding: 0;
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid #f1f5f9;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
-
-.navbar-background {
-  position: absolute;
-  inset: 0;
-  backdrop-filter: blur(20px) saturate(180%);
-  background: rgba(255, 255, 255, 0.9);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  z-index: -1;
+.nav-inner {
+  max-width: 1400px; margin: 0 auto;
+  padding: 0 32px;
+  height: 72px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
 }
+.logo { display: flex; align-items: center; text-decoration: none; flex-shrink: 0; }
+.logo-img { height: 52px; width: auto; }
 
-.navbar-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 0;
-  max-width: 100%;
+.nav-links { display: flex; align-items: center; gap: 32px; }
+.nav-link {
+  text-decoration: none; font-size: 14px; font-weight: 600; color: #64748b;
+  transition: color .2s; white-space: nowrap;
 }
+.nav-link:hover, .nav-link.active { color: #2563eb; }
+.nav-link.active { border-bottom: 2px solid #2563eb; padding-bottom: 2px; }
 
-
-.logo-icon {
-  font-size: 28px;
-  filter: drop-shadow(0 2px 8px rgba(37, 99, 235, 0.3));
+.nav-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.btn-login {
+  font-size: 14px; font-weight: 600; color: #475569;
+  text-decoration: none; padding: 8px 16px; border-radius: 10px;
+  transition: color .2s;
 }
-
-@media (max-width: 768px) {
-  .logo-img {
-    height: 30px;
-  }
-}
-
-.nav-links {
-  display: flex;
-  gap: 36px;
-  align-items: center;
-}
-
-.nav-links a {
-  text-decoration: none;
-  color: #475569;
-  font-weight: 600;
-  font-size: 15px;
-  position: relative;
-  transition: color 0.3s;
+.btn-login:hover { color: #2563eb; }
+.btn-register {
+  font-size: 14px; font-weight: 700; color: #fff;
+  text-decoration: none; padding: 10px 22px; border-radius: 100px;
+  background: linear-gradient(135deg, #22d3ee, #3b82f6);
+  box-shadow: 0 4px 14px rgba(59,130,246,.35);
+  transition: box-shadow .2s, transform .2s;
   white-space: nowrap;
 }
+.btn-register:hover { box-shadow: 0 6px 20px rgba(59,130,246,.45); transform: translateY(-1px); }
 
-.nav-links a::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 2px;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
-  transition: width 0.3s;
-  border-radius: 2px;
-}
+.hamburger { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 4px; }
+.bar { display: block; width: 24px; height: 2px; background: #334155; border-radius: 2px; transition: all .3s; }
+.bar.open:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.bar.open:nth-child(2) { opacity: 0; }
+.bar.open:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-.nav-links a:hover {
-  color: #2563eb;
-}
-
-.nav-links a:hover::after {
-  width: 100%;
-}
-
-.nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.nav-login {
-  padding: 10px 22px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 15px;
-  color: #475569;
-  text-decoration: none;
-  transition: all 0.3s;
-  background: transparent;
-  border: 2px solid transparent;
-}
-
-.nav-login:hover {
-  color: #2563eb;
-  background: #eff6ff;
-  border-color: #dbeafe;
-}
-
-.nav-cta {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
-  color: white;
-  border: none;
-  padding: 11px 26px;
-  border-radius: 10px;
-  font-weight: 700;
-  font-size: 15px;
-  text-decoration: none;
-  transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-  white-space: nowrap;
-  flex-shrink: 0;
-  display: inline-block;
-}
-
-.nav-cta:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
-}
-
-/* Mobile Menu Button */
-.mobile-menu-btn {
-  display: none;
-  width: 44px;
-  height: 44px;
-  border: none;
-  background: #f8fafc;
-  border-radius: 10px;
-  font-size: 24px;
-  cursor: pointer;
-  transition: all 0.3s;
-  align-items: center;
-  justify-content: center;
-}
-
-.mobile-menu-btn:hover {
-  background: #f1f5f9;
-}
-
-.menu-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Mobile Menu */
 .mobile-menu {
-  display: none;
-  flex-direction: column;
-  padding: 20px 0;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid #e2e8f0;
-  margin-top: 18px;
+  border-top: 1px solid #f1f5f9;
+  padding: 16px 32px 24px;
+  display: flex; flex-direction: column; gap: 4px;
+  background: rgba(255,255,255,.98);
 }
-
-.mobile-menu a {
-  padding: 12px 0;
-  color: #475569;
-  font-weight: 600;
-  font-size: 16px;
-  text-decoration: none;
-  transition: all 0.3s;
-  border-left: 3px solid transparent;
-  padding-left: 16px;
+.mob-link {
+  font-size: 15px; font-weight: 600; color: #475569;
+  text-decoration: none; padding: 12px 8px;
+  border-bottom: 1px solid #f8fafc; transition: color .2s;
 }
+.mob-link:hover { color: #2563eb; }
+.mob-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.mob-actions .btn-login, .mob-actions .btn-register { text-align: center; display: block; }
 
-.mobile-menu a:hover {
-  color: #2563eb;
-  border-left-color: #2563eb;
-  background: #f8fafc;
-}
+.slide-enter-active, .slide-leave-active { transition: opacity .25s, transform .25s; }
+.slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(-8px); }
 
-.mobile-menu-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
-  padding-top: 20px;
-  border-top: 1px solid #e2e8f0;
-}
-
-.mobile-login {
-  padding: 12px 24px !important;
-  border: 2px solid #2563eb !important;
-  border-radius: 10px;
-  text-align: center;
-  color: #2563eb !important;
-  font-weight: 700 !important;
-}
-
-.mobile-register {
-  padding: 12px 24px !important;
-  background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
-  border-radius: 10px;
-  text-align: center;
-  color: white !important;
-  font-weight: 700 !important;
-}
-
-/* Slide Down Animation */
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-down-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.slide-down-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.logo-img {
-  height: 100px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-  /* Si la imagen tiene fondo claro y el navbar es blanco, esto la resalta */
-  filter: drop-shadow(0 2px 8px rgba(37, 99, 235, 0.15));
-}
-
-@media (max-width: 768px) {
-  .logo-img {
-    height: 100px;
-  }
-}
-
-@media (max-width: 1024px) {
-  .nav-links {
-    gap: 24px;
-  }
-
-  .nav-links a {
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 768px) {
-  .navbar-content {
-    padding: 16px 0;
-  }
-
-  .logo-icon {
-    font-size: 24px;
-  }
-
-  .nav-links,
-  .nav-actions {
-    display: none;
-  }
-
-  .mobile-menu-btn {
-    display: flex;
-  }
-
-  .mobile-menu {
-    display: flex;
-  }
-}
+@media (max-width: 900px) { .nav-links { display: none; } }
+@media (max-width: 640px) { .nav-actions { display: none; } .hamburger { display: flex; } }
 </style>
