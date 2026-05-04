@@ -182,7 +182,7 @@ const roleLabel = computed(() => {
 });
 
 const currentDate = computed(() =>
-  new Date().toLocaleDateString('es-PE', {
+  new Date().toLocaleDateString('es-CO', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   })
 );
