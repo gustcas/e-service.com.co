@@ -42,7 +42,7 @@
       <!-- Footer -->
       <div class="sidebar-footer">
 
-        <div class="user-profile">
+        <div class="user-profile" @click="settingsOpen = true" style="cursor:pointer;flex:1">
 
           <img
             :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${authStore.user?.name}`"
@@ -50,23 +50,14 @@
           />
 
           <div class="user-info">
-            <div class="user-name">
-              {{ authStore.user?.name }}
-            </div>
-
-            <div class="user-role">
-              {{ roleLabel }}
-            </div>
+            <div class="user-name">{{ authStore.user?.name }}</div>
+            <div class="user-role">{{ roleLabel }}</div>
           </div>
 
         </div>
 
-        <button
-          class="logout-btn"
-          @click="handleLogout"
-        >
-          🚪
-        </button>
+        <button class="settings-btn" @click="settingsOpen = true" title="Configuración">⚙️</button>
+        <button class="logout-btn" @click="handleLogout">🚪</button>
 
       </div>
 
@@ -125,11 +116,6 @@
             <span class="notification-dot"></span>
             🔔
           </button>
-
-          <button class="icon-btn">
-            ⚙️
-          </button>
-
         </div>
 
       </header>
@@ -138,6 +124,8 @@
 
     </main>
 
+    <AccountSettings v-model="settingsOpen" />
+
   </div>
 </template>
 
@@ -145,10 +133,12 @@
 
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import AccountSettings from '@/components/AccountSettings.vue'
 
 const authStore = useAuthStore()
 
-const sidebarOpen = ref(false)
+const sidebarOpen  = ref(false)
+const settingsOpen = ref(false)
 
 const currentDate = computed(() =>
   new Date().toLocaleDateString(

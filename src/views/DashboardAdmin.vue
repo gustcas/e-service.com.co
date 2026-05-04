@@ -34,7 +34,7 @@
       </nav>
 
       <div class="sidebar-footer">
-        <div class="user-profile">
+        <div class="user-profile" @click="settingsOpen = true" style="cursor:pointer;flex:1">
           <img
             :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${authStore.user?.name}`"
             alt="Admin"
@@ -45,6 +45,7 @@
             <div class="user-role">{{ roleLabel }}</div>
           </div>
         </div>
+        <button class="settings-btn" @click="settingsOpen = true" title="Configuración">⚙️</button>
         <button class="logout-btn" @click="handleLogout" title="Cerrar sesión">🚪</button>
       </div>
     </aside>
@@ -87,6 +88,9 @@
 
       <RouterView />
     </main>
+
+    <AccountSettings v-model="settingsOpen" />
+
   </div>
 </template>
 
@@ -95,6 +99,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import api from '@/services/api';
+import AccountSettings from '@/components/AccountSettings.vue';
 
 const route     = useRoute();
 const router    = useRouter();
@@ -102,6 +107,7 @@ const authStore = useAuthStore();
 
 // ── Estado ─────────────────────────────────────────────────
 const sidebarOpen  = ref(false);
+const settingsOpen = ref(false);
 const loadingStats = ref(false);
 const loadingUsers = ref(false);
 const apiError     = ref('');
