@@ -39,8 +39,10 @@
         <div class="cat-icon-wrap">
           <span class="cat-emoji">{{ catEmoji(cat.name) }}</span>
         </div>
-        <span class="cat-name">{{ cat.name }}</span>
-        <span class="cat-count">{{ serviceCountFor(cat.id) }} servicios</span>
+        <div class="cat-text">
+          <span class="cat-name">{{ cat.name }}</span>
+          <span class="cat-count">{{ serviceCountFor(cat.id) }} servicios</span>
+        </div>
         <div class="cat-arrow">→</div>
       </button>
     </div>
@@ -171,6 +173,14 @@
 
             <label class="field-label">📱 Celular</label>
             <input v-model="form.company_phone" class="field-input" placeholder="Número de celular" type="tel" />
+
+            <label class="field-label">🌆 Ciudad</label>
+            <select v-model="form.city_id" class="field-select">
+              <option value="" disabled>Selecciona una ciudad</option>
+              <option v-for="city in cities" :key="city.id" :value="city.id">
+                {{ city.name }} — {{ city.department }}
+              </option>
+            </select>
           </div>
 
           <!-- ---- STEP: Ubicación ---- -->
@@ -274,8 +284,8 @@
             Estamos buscando al profesional ideal para ti. Te notificaremos cuando alguien acepte.
           </p>
           <div class="success-detail">
-            <span>{{ selectedService?.name }}</span>
-            <strong>${{ formatCOP(totalPrice) }}</strong>
+            <span>{{ successService }}</span>
+            <strong>${{ formatCOP(successPrice) }}</strong>
           </div>
           <button class="btn-success-close" @click="showSuccessModal = false">
             Entendido 👍
@@ -312,7 +322,9 @@ const selectedService = ref(null)
 
 const showServicesModal = ref(false)
 const showRequestModal = ref(false)
-const showSuccessModal = ref(false)
+const showSuccessModal  = ref(false)
+const successPrice      = ref(0)
+const successService    = ref('')
 
 const currentStep = ref(0)
 const sending = ref(false)
@@ -556,7 +568,7 @@ const sendRequest = async () => {
       description: form.value.description,
       address: form.value.address,
       reference: form.value.reference,
-      city_id: form.value.city_id,
+      city_id: form.value.city_id || null,
       service_date: form.value.service_date,
       service_time: form.value.service_time,
       people_count: form.value.people_count,
@@ -570,6 +582,8 @@ const sendRequest = async () => {
       budget: totalPrice.value,
     })
 
+    successPrice.value   = totalPrice.value
+    successService.value = selectedService.value?.name ?? ''
     showRequestModal.value = false
     showSuccessModal.value = true
     resetForm()
@@ -769,14 +783,14 @@ onMounted(() => {
   background: white;
   border: 1.5px solid #e2e8f0;
   border-radius: 20px;
-  padding: 22px 18px 20px;
+  padding: 24px 18px 20px;
   cursor: pointer;
   text-align: left;
   position: relative;
   transition: border-color 0.2s, box-shadow 0.25s, transform 0.2s;
   font-family: inherit;
   overflow: hidden;
-  min-height: 170px;
+  min-height: 185px;
 }
 
 /* Franja de color superior por posición */
@@ -815,56 +829,60 @@ onMounted(() => {
 .category-card:nth-child(5) .cat-icon-wrap { background: #fdf2f8; }
 
 .cat-icon-wrap {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   background: #eff6ff;
-  border-radius: 16px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 2px;
   flex-shrink: 0;
   position: relative;
   z-index: 1;
+  margin-bottom: 4px;
 }
 
 .cat-emoji {
-  font-size: 28px;
+  font-size: 26px;
+}
+
+.cat-text {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+  width: 100%;
 }
 
 .cat-name {
-  font-size: 14px;
+  display: block;
+  font-size: 15px;
   font-weight: 900;
   color: #0f172a;
   line-height: 1.25;
-  position: relative;
-  z-index: 1;
+  margin-bottom: 4px;
 }
 
 .cat-count {
+  display: block;
   font-size: 11px;
   color: #94a3b8;
-  font-weight: 700;
-  background: #f1f5f9;
-  padding: 2px 8px;
-  border-radius: 20px;
-  position: relative;
-  z-index: 1;
+  font-weight: 600;
 }
 
 .cat-arrow {
   position: absolute;
   bottom: 16px;
   right: 16px;
-  width: 28px;
-  height: 28px;
-  background: #f1f5f9;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  background: #eff6ff;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  color: #94a3b8;
+  font-size: 14px;
+  color: #2563eb;
   transition: color 0.2s, background 0.2s, transform 0.2s;
   z-index: 1;
 }
@@ -1591,10 +1609,6 @@ onMounted(() => {
     grid-template-columns: repeat(2, 1fr);
   }
 
-
-  .category-card {
-    min-height: 150px;
-  }
 
   .modal-sheet {
     max-height: 92vh;
