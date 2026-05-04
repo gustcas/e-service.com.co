@@ -47,7 +47,7 @@
             <div class="mini-stat amber">
                 <span class="mini-stat-icon">💰</span>
                 <div>
-                    <div class="mini-stat-value">S/ {{ avgPrice }}</div>
+                    <div class="mini-stat-value">$ {{ formatCOP(avgPrice) }}</div>
                     <div class="mini-stat-label">Precio promedio</div>
                 </div>
             </div>
@@ -120,7 +120,7 @@
                                     {{ category.services.length }} servicios
                                 </span>
                                 <span v-if="category.services.length" class="meta-chip">
-                                    💰 Desde S/ {{ minPrice(category.services) }}
+                                    💰 Desde ${{ formatCOP(minPrice(category.services)) }}
                                 </span>
                             </div>
                         </div>
@@ -172,7 +172,7 @@
                                     <span class="service-name">{{ service.name }}</span>
                                 </td>
                                 <td>
-                                    <span class="price-badge">S/ {{ service.price }}</span>
+                                    <span class="price-badge">${{ formatCOP(service.price) }}</span>
                                 </td>
                                 <td><span class="pct-chip">{{ service.allies_percentage }}%</span></td>
                                 <td><span class="pct-chip">{{ service.payment_gateway_commission }}%</span></td>
@@ -238,7 +238,7 @@
                                 placeholder="Ej: Instalación de tomacorrientes" />
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Precio (S/)</label>
+                            <label class="form-label">Precio ($)</label>
                             <input v-model="serviceForm.price" type="number" step="0.01" class="form-input"
                                 placeholder="0.00" />
                         </div>
@@ -321,8 +321,8 @@ const totalServices = computed(() => categories.value.reduce((sum, c) => sum + c
 
 const avgPrice = computed(() => {
     const all = categories.value.flatMap(c => c.services.map(s => parseFloat(s.price) || 0))
-    if (!all.length) return '0.00'
-    return (all.reduce((a, b) => a + b, 0) / all.length).toFixed(2)
+    if (!all.length) return 0
+    return all.reduce((a, b) => a + b, 0) / all.length
 })
 
 const maxServicesCategory = computed(() => {
@@ -353,9 +353,12 @@ const toggleExpand = (id) => {
 }
 
 // ─── Helpers ───────────────────────────────────────────────
+const formatCOP = (val) =>
+    Number(val || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+
 const minPrice = (services) => {
     const prices = services.map(s => parseFloat(s.price) || 0)
-    return Math.min(...prices).toFixed(2)
+    return Math.min(...prices)
 }
 
 // ─── API ───────────────────────────────────────────────────

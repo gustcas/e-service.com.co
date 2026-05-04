@@ -529,7 +529,7 @@ const visiblePages = computed(() => {
 });
 
 // ─── Estadísticas rápidas ──────────────────────────────────
-const statsCache = ref({ total: 0, clients: 0, professionals: 0, admins: 0, verified: 0 });
+const statsCache = ref({ total: 0, clients: 0, professionals: 0, verified: 0, pending: 0 });
 
 const statsRow = computed(() => [
   { icon: '👥', label: 'Total', value: statsCache.value.total, color: 'blue' },
@@ -539,9 +539,9 @@ const statsRow = computed(() => [
 ]);
 
 const roleFilters = computed(() => [
-  { value: 'all', icon: '🌐', label: 'Todos', count: statsCache.value.clients + statsCache.value.professionals },
-  { value: 'client', icon: '👤', label: 'Clientes', count: statsCache.value.clients },
-  { value: 'professional', icon: '💼', label: 'Profesionales', count: statsCache.value.professionals },
+  { value: 'all', icon: '🌐', label: 'Todos', count: statsCache.value.total ?? 0 },
+  { value: 'client', icon: '👤', label: 'Clientes', count: statsCache.value.clients ?? 0 },
+  { value: 'professional', icon: '💼', label: 'Profesionales', count: statsCache.value.professionals ?? 0 },
 ]);
 
 const statusFilters = [
@@ -587,7 +587,7 @@ const roleLabels = {
 
 const formatDate = (d) => {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('es-PE', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
 const timeAgo = (d) => {
@@ -647,7 +647,7 @@ const fetchUsers = async () => {
     // 👇 Stats vienen aparte
     statsCache.value = data.stats
 
-    lastUpdated.value = new Date().toLocaleTimeString('es-PE')
+    lastUpdated.value = new Date().toLocaleTimeString('es-CO')
 
   } catch (err) {
     error.value = 'Error cargando usuarios'
