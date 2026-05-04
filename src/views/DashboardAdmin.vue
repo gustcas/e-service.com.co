@@ -110,7 +110,25 @@ const recentUsers  = ref([]);
 
 // ── Permisos reactivos desde el store ──────────────────────
 const isSuperAdmin = computed(() => authStore.user?.is_super_admin ?? false);
-const hasModule    = (module) => isSuperAdmin.value || (authStore.user?.permissions?.[module] === true);
+
+// Soporta formato antiguo (boolean) y nuevo ({ enabled, read, write, ... })
+const hasModule = (module) => {
+  if (isSuperAdmin.value) return true;
+  const perm = authStore.user?.permissions?.[module];
+  if (!perm) return false;
+  if (typeof perm === 'boolean') return perm;
+  return perm.enabled === true;
+};
+
+// Verifica un permiso específico dentro de un módulo
+const can = (module, action) => {
+  if (isSuperAdmin.value) return true;
+  const perm = authStore.user?.permissions?.[module];
+  if (!perm) return false;
+  if (typeof perm === 'boolean') return perm;
+  if (!perm.enabled) return false;
+  return perm[action] === true;
+};
 
 // ── NavItems filtrados según permisos ──────────────────────
 const allNavItems = [
