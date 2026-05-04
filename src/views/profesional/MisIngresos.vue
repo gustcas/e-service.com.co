@@ -2,12 +2,14 @@
   <div class="ingresos-container">
 
     <!-- Loading -->
-    <div v-if="loading" class="skeleton-list">
-      <div v-for="n in 4" :key="n" class="skeleton-card">
-        <div class="skeleton-line w-60"></div>
-        <div class="skeleton-line w-40 short"></div>
-        <div class="skeleton-line w-80 short"></div>
-      </div>
+    <div v-if="loading" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Cargando tus ingresos...</p>
+    </div>
+
+    <!-- Error -->
+    <div v-else-if="errorMsg" class="error-state">
+      <p>⚠️ {{ errorMsg }}</p>
     </div>
 
     <template v-else>
@@ -167,14 +169,6 @@
           <Transition name="expand">
             <div v-if="expandedId === item.id" class="row-detail">
               <div class="rd-amounts">
-                <div class="rd-amount-row">
-                  <span>Valor total</span>
-                  <span>{{ formatCurrency(item.amount) }}</span>
-                </div>
-                <div class="rd-amount-row red">
-                  <span>Comisión ({{ summary.commission_pct }}%)</span>
-                  <span>- {{ formatCurrency(item.commission) }}</span>
-                </div>
                 <div class="rd-amount-row green">
                   <span>Tu ganancia neta</span>
                   <span>{{ formatCurrency(item.net_amount) }}</span>
@@ -205,6 +199,7 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
 
 const loading  = ref(true)
+const errorMsg = ref('')
 const summary  = ref({ total_jobs: 0, total_earned: 0, pending_jobs: 0, commission_pct: 15 })
 const earnings = ref([])
 
@@ -271,9 +266,11 @@ const loadEarnings = async () => {
     if (data.success) {
       summary.value  = data.summary
       earnings.value = data.earnings
+    } else {
+      errorMsg.value = data.message || 'No se pudo cargar la información.'
     }
-  } catch {
-    // silencioso
+  } catch (e) {
+    errorMsg.value = e.response?.data?.message || 'Error al conectar con el servidor.'
   } finally {
     loading.value = false
   }
@@ -826,19 +823,45 @@ onMounted(loadEarnings)
 .pg-num.active { background: #2563eb; border-color: #2563eb; color: white; }
 .pg-num:not(.active):hover { background: #f8fafc; border-color: #cbd5e1; }
 
-/* ── SKELETON ── */
-.skeleton-list  { display: flex; flex-direction: column; gap: 12px; }
-.skeleton-card  { background: white; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
-.skeleton-line  {
-  height: 14px; border-radius: 6px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%; animation: shimmer 1.4s infinite;
+/* ── LOADING ── */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 24px;
 }
-.skeleton-line.short { height: 11px; }
-.skeleton-line.w-80  { width: 80%; }
-.skeleton-line.w-60  { width: 60%; }
-.skeleton-line.w-40  { width: 40%; }
-@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 600;
+  margin: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── ERROR ── */
+.error-state {
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-radius: 14px;
+  padding: 20px 24px;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
