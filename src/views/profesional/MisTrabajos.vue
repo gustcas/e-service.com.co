@@ -93,6 +93,10 @@
                         </div>
                     </div>
                     <div class="job-actions">
+                        <button class="btn-chat" @click.stop="openChat(job)">
+                            💬 Chat
+                            <span v-if="unreadCounts[job.id]" class="chat-badge">{{ unreadCounts[job.id] }}</span>
+                        </button>
                         <button v-if="job.status === 'accepted'" class="btn-evidence" @click.stop="openEvidenceModal(job)">📷 Evidencias</button>
                         <button v-if="job.status === 'accepted'" class="btn-complete" @click.stop="openCodeModal(job)">✓ Completar</button>
                         <button v-if="job.status === 'completed'" class="btn-view-ev" @click.stop="openEvidenceModal(job)">🖼️ Ver evidencias</button>
@@ -149,6 +153,10 @@
               <div v-if="expandedId === job.id" class="row-detail">
                 <p class="rd-desc">{{ job.description }}</p>
                 <div class="rd-actions">
+                  <button class="btn-chat" @click.stop="openChat(job)">
+                    💬 Chat con cliente
+                    <span v-if="unreadCounts[job.id]" class="chat-badge">{{ unreadCounts[job.id] }}</span>
+                  </button>
                   <button v-if="job.status === 'accepted'" class="btn-evidence" @click.stop="openEvidenceModal(job)">📷 Evidencias</button>
                   <button v-if="job.status === 'accepted'" class="btn-complete" @click.stop="openCodeModal(job)">✓ Completar</button>
                   <button v-if="job.status === 'completed'" class="btn-view-ev" @click.stop="openEvidenceModal(job)">🖼️ Ver evidencias</button>
@@ -262,12 +270,44 @@
             </div>
         </Transition>
 
+        <!-- CHAT -->
+        <ChatModal
+          v-if="chatRequest"
+          v-model="chatOpen"
+          :request-id="chatRequest.id"
+          :other-name="chatRequest.client_name ?? 'Cliente'"
+          :service-name="chatRequest.service_name ?? ''"
+          @read="onChatRead"
+        />
+
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/services/api'
+import ChatModal from '@/components/ChatModal.vue'
+import chatService from '@/services/chatService'
+
+const chatOpen    = ref(false)
+const chatRequest = ref(null)
+const unreadCounts = ref({})
+
+const openChat = (job) => {
+  chatRequest.value = job
+  chatOpen.value    = true
+}
+
+const onChatRead = () => {
+  loadUnreads()
+}
+
+const loadUnreads = async () => {
+  try {
+    const { data } = await chatService.getUnreads()
+    unreadCounts.value = data
+  } catch { /* silent */ }
+}
 
 const tabs = [
     { key: 'accepted', label: 'En curso' },
@@ -489,7 +529,15 @@ const submitEvidence = async () => {
     }
 }
 
-onMounted(loadJobs)
+let unreadTimer = null
+
+onMounted(() => {
+  loadJobs()
+  loadUnreads()
+  unreadTimer = setInterval(loadUnreads, 5000)
+})
+
+onUnmounted(() => clearInterval(unreadTimer))
 </script>
 
 <style scoped>
@@ -809,6 +857,28 @@ onMounted(loadJobs)
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+}
+
+.btn-chat {
+    position: relative;
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #86efac;
+    padding: 7px 13px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, transform .15s;
+    display: inline-flex; align-items: center; gap: 5px;
+}
+.btn-chat:hover { background: #dcfce7; transform: translateY(-1px); }
+.chat-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #ef4444; color: #fff;
+    font-size: 10px; font-weight: 800;
+    min-width: 18px; height: 18px; border-radius: 9px;
+    padding: 0 4px; line-height: 1;
 }
 
 .btn-evidence {
