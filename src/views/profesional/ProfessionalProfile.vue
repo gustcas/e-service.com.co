@@ -21,7 +21,7 @@
         <!-- Categoría -->
         <div class="form-group">
           <label>Especialidad *</label>
-          <select v-model="form.category_id" @change="filterServices">
+          <select v-model="form.category_id" @change="filterServices(true)">
             <option value="" disabled>Selecciona una categoría</option>
             <option v-for="category in categories" :key="category.id" :value="category.id">
               {{ category.name }}
@@ -218,12 +218,13 @@ const loadServices = async () => {
   allServices.value = response.data
 }
 
-const filterServices = () => {
-
+const filterServices = (autoSelect = false) => {
   services.value = allServices.value.filter(
     s => Number(s.category_id) === Number(form.value.category_id)
   )
-
+  if (autoSelect) {
+    form.value.service_ids = services.value.map(s => s.id)
+  }
 }
 /* ===============================
    🔥 NUEVO: CARGAR PERFIL SI EXISTE
