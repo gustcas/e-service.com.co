@@ -122,6 +122,17 @@ const routes = [
         meta: { requiresAuth: true, role: 'admin', title: 'Reportes - IService' },
       },
       {
+        path: 'live-services',
+        name: 'AdminLiveServices',
+        component: () => import('@/views/admin/AdminLiveServices.vue'),
+        meta: {
+          requiresAuth: true,
+          role: 'admin',
+          module: 'live_services',
+          title: 'Servicios en Vivo - IService',
+        },
+      },
+      {
         path: 'logs',
         name: 'AdminLogs',
         component: () => import('@/views/admin/AdminLogs.vue'),

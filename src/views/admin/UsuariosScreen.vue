@@ -266,7 +266,7 @@
 
     <!-- ── MODAL: Detail ───────────────────────────────── -->
     <Teleport to="body">
-      <div v-if="showDetail" class="modal-overlay" @click.self="showDetail = false">
+      <div v-if="showDetail" class="modal-overlay">
         <div class="modal detail-modal">
           <div class="modal-header">
             <h3>Detalle del Usuario</h3>
@@ -317,8 +317,8 @@
               </div>
               <div class="detail-item">
                 <span class="detail-label">Verificado el</span>
-                <span class="detail-value">{{ selectedUser.email_verified_at ?
-                  formatDate(selectedUser.email_verified_at) : '—' }}</span>
+                <span class="detail-value">{{ selectedUser.professional?.verified_at ?
+                  formatDate(selectedUser.professional.verified_at) : '—' }}</span>
               </div>
             </div>
             <!-- Datos adicionales del profesional -->
@@ -346,26 +346,6 @@
                   <span class="detail-label">Dirección</span>
                   <span class="detail-value">
                     {{ selectedUser.professional.address }}
-                  </span>
-                </div>
-
-                <div class="detail-item">
-                  <span class="detail-label">Estado</span>
-
-                  <span :class="[
-                    'status-badge',
-                    selectedUser.professional?.status === 'approved'
-                      ? 'status-active'
-                      : 'status-pending'
-                  ]">
-                    <span class="status-dot"></span>
-
-                    {{
-                      selectedUser.professional?.status === 'approved'
-                        ? 'Aprobado'
-                        : 'Pendiente'
-                    }}
-
                   </span>
                 </div>
 
@@ -483,6 +463,22 @@
       </div>
     </Teleport>
 
+    <!-- ── Toast: error de verificación ─────────────────── -->
+    <Teleport to="body">
+      <Transition name="toast-slide">
+        <div v-if="verifyToast.show" class="verify-toast">
+          <div class="verify-toast-icon">⚠️</div>
+          <div class="verify-toast-body">
+            <div class="verify-toast-title">{{ verifyToast.message }}</div>
+            <ul v-if="verifyToast.missing.length" class="verify-toast-list">
+              <li v-for="item in verifyToast.missing" :key="item">{{ item }}</li>
+            </ul>
+          </div>
+          <button class="verify-toast-close" @click="verifyToast.show = false">✕</button>
+        </div>
+      </Transition>
+    </Teleport>
+
   </div>
 </template>
 
@@ -501,6 +497,15 @@ const users = ref([]);
 const loading = ref(false);
 const error = ref('');
 const lastUpdated = ref('—');
+
+// ─── Toast de error de verificación ───────────────────────
+const verifyToast = ref({ show: false, message: '', missing: [] })
+let verifyToastTimer = null
+const showVerifyError = (message, missing = []) => {
+  clearTimeout(verifyToastTimer)
+  verifyToast.value = { show: true, message, missing }
+  verifyToastTimer = setTimeout(() => { verifyToast.value.show = false }, 6000)
+}
 
 // ─── Filtros ───────────────────────────────────────────────
 const filters = ref({
@@ -793,7 +798,12 @@ const verifyProfessional = async (user) => {
       }
     }
   } catch (e) {
-    console.error(e)
+    const resp = e?.response?.data
+    if (resp && !resp.success) {
+      showVerifyError(resp.message || 'No se pudo verificar.', resp.missing || [])
+    } else {
+      showVerifyError('Error al verificar. Intenta de nuevo.')
+    }
   } finally {
     verifyingId.value = null
   }
@@ -2463,4 +2473,43 @@ td {
 .status-neutral .status-dot {
   background: #94a3b8;
 }
+
+/* ── Toast verificación ─────────────────────────────────── */
+.verify-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff;
+  border: 2px solid #fca5a5;
+  border-left: 5px solid #ef4444;
+  border-radius: 12px;
+  padding: 14px 18px;
+  min-width: 300px;
+  max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.16);
+}
+.verify-toast-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.verify-toast-body { flex: 1; }
+.verify-toast-title {
+  font-size: 13px; font-weight: 700; color: #dc2626; margin-bottom: 4px;
+}
+.verify-toast-list {
+  margin: 0; padding-left: 16px;
+  font-size: 12px; color: #64748b; line-height: 1.8;
+}
+.verify-toast-list li::marker { color: #ef4444; }
+.verify-toast-close {
+  background: none; border: none; color: #94a3b8;
+  cursor: pointer; font-size: 13px; flex-shrink: 0;
+  padding: 0; line-height: 1;
+}
+.verify-toast-close:hover { color: #475569; }
+.toast-slide-enter-active, .toast-slide-leave-active { transition: opacity .25s, transform .25s; }
+.toast-slide-enter-from  { opacity: 0; transform: translateX(-50%) translateY(20px); }
+.toast-slide-leave-to    { opacity: 0; transform: translateX(-50%) translateY(20px); }
 </style>

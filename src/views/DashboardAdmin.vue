@@ -61,9 +61,6 @@
             <img src="/images/logo-services.png" alt="logo" class="logo-img" />
           </a>
         </div>
-        <button class="icon-btn small" @click="refreshStats" :disabled="loadingStats">
-          <span :class="{ spinning: loadingStats }">🔄</span>
-        </button>
       </div>
 
       <!-- Desktop Header -->
@@ -80,9 +77,6 @@
             <span class="chip-dot"></span>
             <span class="chip-email">{{ authStore.user?.email }}</span>
           </div>
-          <button class="icon-btn" @click="refreshStats" :disabled="loadingStats" title="Actualizar">
-            <span :class="{ spinning: loadingStats }">🔄</span>
-          </button>
         </div>
       </header>
 
@@ -124,6 +118,7 @@ const allNavItems = [
   { id: 'users',      icon: '👥', label: 'Usuarios',         module: 'users',      superAdminOnly: false },
   { id: 'categories', icon: '🏷️', label: 'Categorías',      module: 'categories', superAdminOnly: false },
   { id: 'reports',    icon: '📈', label: 'Reportes',        module: null,         superAdminOnly: false },
+  { id: 'live-services', icon: '🔴', label: 'Servicios en Vivo', module: 'live_services', superAdminOnly: false },
   { id: 'logs',       icon: '📋', label: 'Auditoría',       module: null,         superAdminOnly: true  },
   { id: 'sub-admins', icon: '🛡️', label: 'Administradores', module: null,         superAdminOnly: true  },
 ];
@@ -148,12 +143,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
 
 // ── Navegación ─────────────────────────────────────────────
 const routeMap = {
-  dashboard:    { name: 'DashboardAdmin' },
-  users:        { name: 'AdminUsers' },
-  categories:   { name: 'AdminCategories' },
-  reports:      { name: 'AdminReports' },
-  logs:         { name: 'AdminLogs' },
-  'sub-admins': { name: 'AdminSubAdmins' },
+  dashboard:       { name: 'DashboardAdmin'    },
+  users:           { name: 'AdminUsers'        },
+  categories:      { name: 'AdminCategories'   },
+  reports:         { name: 'AdminReports'      },
+  'live-services': { name: 'AdminLiveServices' },
+  logs:            { name: 'AdminLogs'         },
+  'sub-admins':    { name: 'AdminSubAdmins'    },
 };
 
 const navigate = (id) => {
@@ -162,12 +158,13 @@ const navigate = (id) => {
 };
 
 const nameMap = {
-  dashboard:    'DashboardAdmin',
-  users:        'AdminUsers',
-  categories:   'AdminCategories',
-  reports:      'AdminReports',
-  logs:         'AdminLogs',
-  'sub-admins': 'AdminSubAdmins',
+  dashboard:       'DashboardAdmin',
+  users:           'AdminUsers',
+  categories:      'AdminCategories',
+  reports:         'AdminReports',
+  'live-services': 'AdminLiveServices',
+  logs:            'AdminLogs',
+  'sub-admins':    'AdminSubAdmins',
 };
 
 const isActive = (id) => route.name === nameMap[id];
@@ -226,6 +223,7 @@ const refreshStats = () => Promise.all([fetchStats(), fetchRecentUsers()]);
 const handleLogout = () => authStore.logout();
 
 // ── Init ───────────────────────────────────────────────────
+let heartbeatTimer = null;
 onMounted(() => {
   if (authStore.user?.role !== 'admin') {
     authStore.logout();
@@ -233,7 +231,10 @@ onMounted(() => {
   }
   fetchStats();
   fetchRecentUsers();
+  api.get('/heartbeat').catch(() => {});
+  heartbeatTimer = setInterval(() => api.get('/heartbeat').catch(() => {}), 30000);
 });
+onUnmounted(() => clearInterval(heartbeatTimer));
 </script>
 
 <style>
