@@ -103,14 +103,22 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import AccountSettings from '@/components/AccountSettings.vue'
+import api from '@/services/api'
 
 const authStore = useAuthStore()
 
 const sidebarOpen  = ref(false)
 const settingsOpen = ref(false)
+
+let heartbeatTimer = null
+onMounted(() => {
+  api.get('/heartbeat').catch(() => {})
+  heartbeatTimer = setInterval(() => api.get('/heartbeat').catch(() => {}), 30000)
+})
+onUnmounted(() => clearInterval(heartbeatTimer))
 
 const user = ref(null)
 

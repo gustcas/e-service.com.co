@@ -103,14 +103,19 @@
               <!-- Módulos -->
               <td>
                 <div class="module-chips">
-                  <span
-                    v-for="(hasAccess, mod) in admin.modules"
-                    :key="mod"
-                    :class="['module-chip', hasAccess ? 'granted' : 'denied']"
-                    :title="hasAccess ? `Acceso a ${moduleLabel(mod)}` : `Sin acceso a ${moduleLabel(mod)}`"
-                  >
-                    <span class="chip-dot"></span>
-                    {{ moduleLabel(mod) }}
+                  <template v-for="(perms, mod) in admin.modules" :key="mod">
+                    <span
+                      v-if="perms?.enabled"
+                      :class="['module-chip', 'granted']"
+                      :title="`${moduleLabel(mod)}: ${activePerms(perms).join(', ')}`"
+                    >
+                      <span class="chip-dot"></span>
+                      {{ moduleLabel(mod) }}
+                      <span class="chip-perms">{{ activePermsShort(perms) }}</span>
+                    </span>
+                  </template>
+                  <span v-if="!Object.values(admin.modules).some(p => p?.enabled)" class="no-access-text">
+                    Sin accesos
                   </span>
                 </div>
               </td>
@@ -254,33 +259,52 @@
                   <span>🔐</span> Acceso a módulos
                 </div>
                 <p class="perms-hint">
-                  Activa los módulos a los que este administrador tendrá acceso.
+                  Activa el módulo y selecciona los permisos específicos.
                 </p>
 
-                <div class="modules-grid">
+                <div class="modules-list">
                   <div
                     v-for="mod in availableModules"
                     :key="mod"
-                    :class="['module-toggle', form.modules[mod] ? 'enabled' : 'disabled']"
-                    @click="form.modules[mod] = !form.modules[mod]"
+                    :class="['module-card', form.modules[mod]?.enabled ? 'enabled' : 'disabled']"
                   >
-                    <div class="module-toggle-icon">{{ moduleIcon(mod) }}</div>
-                    <div class="module-toggle-info">
-                      <div class="module-toggle-name">{{ moduleLabel(mod) }}</div>
-                      <div class="module-toggle-desc">{{ moduleDesc(mod) }}</div>
+                    <!-- Cabecera del módulo -->
+                    <div class="module-card-header" @click="toggleModule(mod)">
+                      <div class="module-toggle-icon">{{ moduleIcon(mod) }}</div>
+                      <div class="module-toggle-info">
+                        <div class="module-toggle-name">{{ moduleLabel(mod) }}</div>
+                        <div class="module-toggle-desc">{{ moduleDesc(mod) }}</div>
+                      </div>
+                      <div class="toggle-switch" :class="{ on: form.modules[mod]?.enabled }">
+                        <div class="toggle-knob"></div>
+                      </div>
                     </div>
-                    <div class="toggle-switch" :class="{ on: form.modules[mod] }">
-                      <div class="toggle-knob"></div>
+
+                    <!-- Permisos granulares (solo si habilitado) -->
+                    <div v-if="form.modules[mod]?.enabled" class="perm-row">
+                      <label
+                        v-for="perm in modulePerms(mod)"
+                        :key="perm"
+                        class="perm-check"
+                        @click.stop
+                      >
+                        <input
+                          type="checkbox"
+                          :checked="form.modules[mod][perm]"
+                          @change="form.modules[mod][perm] = $event.target.checked"
+                        />
+                        <span class="perm-label">{{ permLabel(perm) }}</span>
+                      </label>
                     </div>
                   </div>
                 </div>
 
-                <!-- Resumen de accesos -->
+                <!-- Resumen -->
                 <div class="access-summary">
-                  <span class="summary-label">Accesos activos:</span>
+                  <span class="summary-label">Módulos activos:</span>
                   <span class="summary-count">
-                    {{ Object.values(form.modules).filter(Boolean).length }}
-                    de {{ availableModules.length }} módulos
+                    {{ Object.values(form.modules).filter(m => m?.enabled).length }}
+                    de {{ availableModules.length }}
                   </span>
                 </div>
               </div>
@@ -367,11 +391,12 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import api from '@/services/api';
 
 // ── Estado principal ───────────────────────────────────────
-const admins           = ref([]);
-const availableModules = ref([]);
-const loading          = ref(true);
-const search           = ref('');
-const showPassword     = ref(false);
+const admins              = ref([]);
+const availableModules    = ref([]);
+const modulePermissions   = ref({});  // { users: ['read','write','edit','delete'], ... }
+const loading             = ref(true);
+const search              = ref('');
+const showPassword        = ref(false);
 
 // ── Filtro de búsqueda ─────────────────────────────────────
 const filtered = computed(() => {
@@ -414,25 +439,34 @@ const showToast = (message, type = 'success') => {
 
 // ── Metadatos de módulos ───────────────────────────────────
 const MODULE_META = {
-  dashboard:  { label: 'Dashboard',   icon: '📊', desc: 'Ver estadísticas generales' },
-  users:      { label: 'Usuarios',    icon: '👥', desc: 'Gestionar clientes y profesionales' },
-  categories: { label: 'Categorías',  icon: '🏷️', desc: 'Administrar categorías y servicios' },
-  services:   { label: 'Servicios',   icon: '🔧', desc: 'Crear y editar servicios' },
-  reports:    { label: 'Reportes',    icon: '📈', desc: 'Ver reportes operativos y financieros' },
-  auditory:   { label: 'Auditoría',   icon: '🔍', desc: 'Historial de acciones del sistema' },
+  dashboard:     { label: 'Dashboard',         icon: '📊', desc: 'Ver estadísticas generales' },
+  users:         { label: 'Usuarios',          icon: '👥', desc: 'Gestionar clientes y profesionales' },
+  categories:    { label: 'Categorías',        icon: '🏷️', desc: 'Administrar categorías y servicios' },
+  services:      { label: 'Servicios',         icon: '🔧', desc: 'Crear y editar servicios' },
+  reports:       { label: 'Reportes',          icon: '📈', desc: 'Ver reportes operativos y financieros' },
+  auditory:      { label: 'Auditoría',         icon: '🔍', desc: 'Historial de acciones del sistema' },
+  live_services: { label: 'Servicios en Vivo', icon: '🔴', desc: 'Monitoreo en tiempo real de la operación' },
 };
 
 const moduleLabel = (mod) => MODULE_META[mod]?.label ?? mod;
 const moduleIcon  = (mod) => MODULE_META[mod]?.icon  ?? '📁';
 const moduleDesc  = (mod) => MODULE_META[mod]?.desc  ?? '';
 
+const PERM_LABELS      = { read: 'Leer', write: 'Crear', edit: 'Editar', delete: 'Eliminar' };
+const PERM_SHORT       = { read: 'R', write: 'C', edit: 'E', delete: 'D' };
+const permLabel        = (p) => PERM_LABELS[p] ?? p;
+const modulePerms      = (mod) => modulePermissions.value[mod] ?? ['read'];
+const activePerms      = (permsObj) => Object.keys(PERM_LABELS).filter(p => permsObj[p]).map(p => PERM_LABELS[p]);
+const activePermsShort = (permsObj) => Object.keys(PERM_SHORT).filter(p => permsObj[p]).map(p => PERM_SHORT[p]).join('');
+
 // ── Fetch ──────────────────────────────────────────────────
 const fetchAdmins = async () => {
   loading.value = true;
   try {
     const { data } = await api.get('/admin/sub-admins');
-    admins.value           = data.admins;
-    availableModules.value = data.modules;
+    admins.value            = data.admins;
+    availableModules.value  = data.modules;
+    modulePermissions.value = data.module_permissions ?? {};
   } catch (e) {
     showToast('Error al cargar los administradores.', 'error');
   } finally {
@@ -445,8 +479,37 @@ onMounted(fetchAdmins);
 // ── Helpers de módulos ─────────────────────────────────────
 const initModules = (existing = {}) => {
   const mods = {};
-  availableModules.value.forEach(m => { mods[m] = existing[m] ?? false; });
+  availableModules.value.forEach(m => {
+    const perms = modulePermissions.value[m] ?? ['read'];
+    const ex    = existing[m];
+
+    if (ex && typeof ex === 'object') {
+      // Nuevo formato: { enabled, read, write, ... }
+      mods[m] = { ...ex };
+    } else {
+      // Sin datos o formato antiguo booleano
+      const enabled = !!ex;
+      const entry   = { enabled };
+      perms.forEach(p => { entry[p] = enabled && p === 'read'; });
+      mods[m] = entry;
+    }
+
+    // Asegurar que todas las claves de permiso existen
+    perms.forEach(p => { if (mods[m][p] === undefined) mods[m][p] = false; });
+  });
   return mods;
+};
+
+const toggleModule = (mod) => {
+  const current = form.modules[mod];
+  if (!current) return;
+  current.enabled = !current.enabled;
+  // Al habilitar, activar "read" por defecto si todo está en false
+  if (current.enabled) {
+    const perms = modulePermissions.value[mod] ?? ['read'];
+    const hasAny = perms.some(p => current[p]);
+    if (!hasAny) current.read = true;
+  }
 };
 
 // ── Validación ─────────────────────────────────────────────
@@ -661,7 +724,9 @@ const executeDelete = async () => {
 }
 .module-chip.granted { background: #dcfce7; color: #16a34a; }
 .module-chip.denied  { background: #f1f5f9; color: #cbd5e1; text-decoration: line-through; }
-.chip-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.chip-dot   { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.chip-perms { font-size: 9px; font-weight: 900; background: rgba(0,0,0,.08); padding: 1px 4px; border-radius: 4px; letter-spacing: .5px; }
+.no-access-text { font-size: 11px; color: #cbd5e1; }
 
 .status-badge {
   display: inline-flex; align-items: center; gap: 6px;
@@ -795,21 +860,47 @@ const executeDelete = async () => {
 /* ── Módulos ─────────────────────────────────────────────── */
 .perms-hint { font-size: 13px; color: #94a3b8; margin: -8px 0 4px; }
 
-.modules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Nuevo layout de módulos con permisos granulares */
+.modules-list { display: flex; flex-direction: column; gap: 8px; }
 
-.module-toggle {
-  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
-  border-radius: 14px; border: 2px solid #f1f5f9;
-  cursor: pointer; transition: all .2s; user-select: none;
+.module-card {
+  border-radius: 12px; border: 2px solid #f1f5f9;
+  overflow: hidden; transition: border-color .2s;
 }
-.module-toggle.enabled  { border-color: #bfdbfe; background: #eff6ff; }
-.module-toggle.disabled { border-color: #f1f5f9; background: #fafafa; }
-.module-toggle:hover    { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+.module-card.enabled  { border-color: #bfdbfe; }
+.module-card.disabled { border-color: #f1f5f9; }
 
-.module-toggle-icon { font-size: 22px; flex-shrink: 0; }
+.module-card-header {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  cursor: pointer; user-select: none; transition: background .15s;
+}
+.module-card.enabled  .module-card-header { background: #eff6ff; }
+.module-card.disabled .module-card-header { background: #fafafa; }
+.module-card-header:hover { opacity: .9; }
+
+.module-toggle-icon { font-size: 20px; flex-shrink: 0; }
 .module-toggle-info { flex: 1; min-width: 0; }
 .module-toggle-name { font-weight: 700; font-size: 13px; color: #0f172a; }
 .module-toggle-desc { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+
+/* Fila de permisos */
+.perm-row {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 10px 14px; background: #f8faff;
+  border-top: 1px solid #e0eaff;
+}
+.perm-check {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 7px; border: 1.5px solid #e2e8f0;
+  background: white; cursor: pointer; user-select: none;
+  font-size: 12px; font-weight: 600; color: #475569;
+  transition: border-color .15s, background .15s;
+}
+.perm-check:has(input:checked) {
+  border-color: #2563eb; background: #eff6ff; color: #2563eb;
+}
+.perm-check input { width: 13px; height: 13px; accent-color: #2563eb; cursor: pointer; }
+.perm-label { pointer-events: none; }
 
 .toggle-switch {
   width: 38px; height: 22px; border-radius: 11px; background: #e2e8f0;
@@ -870,7 +961,7 @@ const executeDelete = async () => {
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .modules-grid  { grid-template-columns: 1fr; }
+  .modules-list  { gap: 6px; }
   .quick-stats   { flex-direction: column; }
   .modal-body    { padding: 20px; }
   .modal-header  { padding: 20px; }
