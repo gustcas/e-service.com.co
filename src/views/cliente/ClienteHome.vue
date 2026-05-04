@@ -566,7 +566,7 @@ const sendRequest = async () => {
       category_id: selectedCategory.value.id,
       service_id: selectedService.value.id,
       description: form.value.description,
-      address: form.value.address,
+      address: form.value.address || '',
       reference: form.value.reference,
       city_id: form.value.city_id || null,
       service_date: form.value.service_date,

@@ -99,6 +99,10 @@
             <span class="pro-name">{{ req.professional.name }}</span>
             <span v-if="req.professional.phone" class="pro-phone">📞 {{ req.professional.phone }}</span>
           </div>
+          <button class="btn-chat-pro" @click.stop="openChat(req)">
+            💬 Chatear
+            <span v-if="unreadCounts[req.id]" class="chat-badge-pro">{{ unreadCounts[req.id] }}</span>
+          </button>
         </div>
 
         <div class="card-divider"></div>
@@ -197,6 +201,10 @@
                 <span class="pro-name">{{ req.professional.name }}</span>
                 <span v-if="req.professional.phone" class="pro-phone">📞 {{ req.professional.phone }}</span>
               </div>
+              <button class="btn-chat-pro" @click.stop="openChat(req)">
+            💬 Chatear
+            <span v-if="unreadCounts[req.id]" class="chat-badge-pro">{{ unreadCounts[req.id] }}</span>
+          </button>
             </div>
 
             <div v-if="req.status === 'accepted' && req.completion_code" class="code-box">
@@ -249,12 +257,42 @@
       <div v-if="toast.visible" class="toast" :class="toast.type">{{ toast.message }}</div>
     </Transition>
 
+    <!-- CHAT -->
+    <ChatModal
+      v-if="chatRequest"
+      v-model="chatOpen"
+      :request-id="chatRequest.id"
+      :other-name="chatRequest.professional ? chatRequest.professional.name : 'Profesional'"
+      :service-name="chatRequest.service_name || ''"
+      @read="onChatRead"
+    />
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/services/api'
+import ChatModal from '@/components/ChatModal.vue'
+import chatService from '@/services/chatService'
+
+const chatOpen     = ref(false)
+const chatRequest  = ref(null)
+const unreadCounts = ref({})
+
+const openChat = (req) => {
+  chatRequest.value = req
+  chatOpen.value    = true
+}
+
+const onChatRead = () => { loadUnreads() }
+
+const loadUnreads = async () => {
+  try {
+    const { data } = await chatService.getUnreads()
+    unreadCounts.value = data
+  } catch { /* silent */ }
+}
 
 // ── Tabs ──────────────────────────────────────────────────────
 const tabs = [
@@ -355,7 +393,15 @@ const generateCode = async (req) => {
   }
 }
 
-onMounted(loadRequests)
+let unreadTimer = null
+
+onMounted(() => {
+  loadRequests()
+  loadUnreads()
+  unreadTimer = setInterval(loadUnreads, 5000)
+})
+
+onUnmounted(() => clearInterval(unreadTimer))
 </script>
 
 <style scoped>
@@ -509,8 +555,24 @@ onMounted(loadRequests)
   background: #f0f9ff; border: 1px solid #bae6fd;
   border-radius: 12px; padding: 10px 12px; margin-bottom: 12px;
 }
+.btn-chat-pro {
+  position: relative; margin-left: auto; flex-shrink: 0;
+  background: #22c55e; color: #fff; border: none;
+  padding: 7px 12px; border-radius: 10px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: background .15s, transform .15s;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.btn-chat-pro:hover { background: #16a34a; transform: translateY(-1px); }
+.chat-badge-pro {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #ef4444; color: #fff;
+  font-size: 10px; font-weight: 800;
+  min-width: 18px; height: 18px; border-radius: 9px;
+  padding: 0 4px; line-height: 1;
+}
 .pro-avatar { width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; }
-.pro-data   { display: flex; flex-direction: column; gap: 1px; }
+.pro-data   { flex: 1; display: flex; flex-direction: column; gap: 1px; }
 .pro-label  { font-size: 9px; font-weight: 800; color: #0369a1; text-transform: uppercase; letter-spacing: .5px; }
 .pro-name   { font-size: 13px; font-weight: 700; color: #0c4a6e; }
 .pro-phone  { font-size: 11px; color: #0369a1; }

@@ -47,7 +47,7 @@
 
       <div class="sidebar-footer">
 
-        <div class="user-profile">
+        <div class="user-profile" @click="settingsOpen = true" style="cursor:pointer;flex:1">
           <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`" class="user-avatar" />
 
           <div class="user-info">
@@ -56,13 +56,14 @@
           </div>
         </div>
 
-        <button class="logout-btn" @click="handleLogout">
-          🚪
-        </button>
+        <button class="settings-btn" @click="settingsOpen = true" title="Configuración">⚙️</button>
+        <button class="logout-btn" @click="handleLogout">🚪</button>
 
       </div>
 
     </aside>
+
+    <AccountSettings v-model="settingsOpen" />
 
     <!-- MAIN -->
     <main class="main-content">
@@ -104,10 +105,12 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import AccountSettings from '@/components/AccountSettings.vue'
 
 const authStore = useAuthStore()
 
-const sidebarOpen = ref(false)
+const sidebarOpen  = ref(false)
+const settingsOpen = ref(false)
 
 const user = ref(null)
 
@@ -253,6 +256,18 @@ const handleLogout = () => {
   border-radius: 12px;
 }
 
+.settings-btn {
+  border: none;
+  background: #eff6ff;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.settings-btn:hover { background: #dbeafe; }
+
 .logout-btn {
   border: none;
   background: #fee2e2;
@@ -260,6 +275,7 @@ const handleLogout = () => {
   height: 40px;
   border-radius: 10px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 /* main */
