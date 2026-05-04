@@ -215,13 +215,13 @@
               <div class="actions-wrap">
                 <button class="action-btn view-btn" @click="openDetail(user)" title="Ver detalle">👁️</button>
                 <button
-                  v-if="user.role === 'professional'"
-                  :class="['action-btn', user.professional?.status === 'approved' ? 'unverify-btn' : 'verify-btn']"
+                  v-if="user.role === 'professional' && user.professional?.status !== 'approved'"
+                  class="action-btn verify-btn"
                   @click="verifyProfessional(user)"
                   :disabled="verifyingId === user.id"
-                  :title="user.professional?.status === 'approved' ? 'Quitar verificación' : 'Verificar profesional'"
+                  title="Verificar profesional"
                 >
-                  {{ user.professional?.status === 'approved' ? '🔒' : '✅' }}
+                  ✅
                 </button>
               </div>
             </td>
@@ -413,6 +413,14 @@
           </div>
           <div class="modal-footer">
             <button class="modal-btn secondary" @click="showDetail = false">Cerrar</button>
+            <button
+              v-if="selectedUser?.role === 'professional' && selectedUser?.professional?.status === 'approved'"
+              class="modal-btn unverify"
+              :disabled="verifyingId === selectedUser?.id"
+              @click="verifyProfessional(selectedUser)"
+            >
+              🔒 Quitar verificación
+            </button>
             <button class="modal-btn primary" @click="openEdit(selectedUser); showDetail = false">Editar</button>
           </div>
         </div>
@@ -1975,6 +1983,16 @@ td {
 
 .modal-btn.primary:hover:not(:disabled) {
   transform: translateY(-1px);
+}
+
+.modal-btn.unverify {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1.5px solid #fed7aa;
+}
+
+.modal-btn.unverify:hover:not(:disabled) {
+  background: #ffedd5;
 }
 
 .modal-btn.secondary {
