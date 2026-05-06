@@ -31,16 +31,6 @@
           <div class="sum-value">{{ summary.pending_jobs }}</div>
           <div class="sum-label">Servicios en curso</div>
         </div>
-        <div class="summary-card gray">
-          <div class="sum-icon">📊</div>
-          <div class="sum-value">{{ summary.commission_pct }}%</div>
-          <div class="sum-label">Comisión plataforma</div>
-        </div>
-      </div>
-
-      <!-- Nota comisión -->
-      <div class="commission-note">
-        La plataforma retiene el {{ summary.commission_pct }}% de cada servicio como comisión. El monto neto es lo que recibes tú.
       </div>
 
       <!-- ── BARRA SUPERIOR ─────────────────────────────── -->
@@ -200,7 +190,7 @@ import api from '@/services/api'
 
 const loading  = ref(true)
 const errorMsg = ref('')
-const summary  = ref({ total_jobs: 0, total_earned: 0, pending_jobs: 0, commission_pct: 15 })
+const summary  = ref({ total_jobs: 0, total_earned: 0, pending_jobs: 0 })
 const earnings = ref([])
 
 const tabs = [
@@ -290,7 +280,7 @@ onMounted(loadEarnings)
 /* ── SUMMARY ── */
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 }
 

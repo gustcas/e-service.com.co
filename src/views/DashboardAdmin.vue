@@ -132,7 +132,7 @@ const can = (module, action) => {
 
 // ── NavItems filtrados según permisos ──────────────────────
 const allNavItems = [
-  { id: 'dashboard',  icon: '📊', label: 'Dashboard',        module: null,         superAdminOnly: false },
+  { id: 'dashboard',  icon: '📊', label: 'Panel Principal',   module: null,         superAdminOnly: false },
   { id: 'users',      icon: '👥', label: 'Usuarios',         module: 'users',      superAdminOnly: false },
   { id: 'categories', icon: '🏷️', label: 'Categorías',      module: 'categories', superAdminOnly: false },
   { id: 'reports',    icon: '📈', label: 'Reportes',        module: null,         superAdminOnly: false },

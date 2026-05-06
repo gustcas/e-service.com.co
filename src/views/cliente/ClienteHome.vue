@@ -184,11 +184,35 @@
           </div>
 
           <!-- ---- STEP: Ubicación ---- -->
-          <div v-if="currentStepName === 'Ubicación'" class="step-body">
-            <label class="field-label">📍 Dirección</label>
-            <input v-model="form.address" class="field-input" placeholder="Calle, número, zona" />
+          <div v-if="currentStepName === 'Ubicación'" class="step-body step-body-map">
+            <label class="field-label-big">📍 Ubicación para el servicio</label>
 
-            <label class="field-label">🗺️ Referencia</label>
+            <!-- Buscador de dirección -->
+            <div class="map-search-row">
+              <input
+                v-model="mapSearch"
+                class="field-input"
+                placeholder="Busca la dirección o arrastra el pin..."
+                @keyup.enter="searchMapAddress"
+              />
+              <button class="btn-map-search" :disabled="mapSearching" @click="searchMapAddress">
+                <svg v-if="!mapSearching" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <span v-else class="spin-sm">⟳</span>
+              </button>
+            </div>
+
+            <!-- Mapa -->
+            <div ref="mapPickerRef" class="map-picker"></div>
+
+            <!-- Dirección seleccionada (editable) -->
+            <div>
+              <label class="field-label">Dirección detectada</label>
+              <input v-model="form.address" class="field-input" placeholder="Dirección del servicio" />
+            </div>
+
+            <label class="field-label">🗺️ Referencia adicional</label>
             <input v-model="form.reference" class="field-input" placeholder="Ej: frente al parque, edificio azul" />
 
             <label class="field-label">🏙️ Ciudad</label>
@@ -203,10 +227,23 @@
           <!-- ---- STEP: Fecha y hora ---- -->
           <div v-if="currentStepName === 'Fecha y hora'" class="step-body">
             <label class="field-label">📅 Fecha del servicio</label>
-            <input type="date" v-model="form.service_date" class="field-input" />
+            <input type="date" v-model="form.service_date" class="field-input" :min="minDate" />
 
             <label class="field-label">⏰ Hora preferida</label>
-            <input type="time" v-model="form.service_time" class="field-input" />
+            <div class="time-picker-row">
+              <select v-model="timeHour" class="field-select time-select">
+                <option value="" disabled>HH</option>
+                <option v-for="h in timeHours" :key="h" :value="h">
+                  {{ String(h).padStart(2,'0') }}{{ h < 12 ? ' am' : h === 12 ? ' m' : ` pm` }}
+                </option>
+              </select>
+              <span class="time-sep">:</span>
+              <select v-model="timeMinute" class="field-select time-select">
+                <option value="" disabled>MM</option>
+                <option v-for="m in timeMinutes" :key="m" :value="m">{{ String(m).padStart(2,'0') }}</option>
+              </select>
+            </div>
+            <p class="field-hint">Horario disponible: 6:00 am – 9:00 pm</p>
           </div>
 
           <!-- ---- STEP: Confirmar ---- -->
@@ -305,7 +342,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import api from '@/services/api'
 import categoryService from '@/services/categoryService'
 
@@ -334,6 +371,8 @@ const form = ref({
   description: '',
   address: '',
   reference: '',
+  lat: null,
+  lng: null,
   city_id: '',
   service_date: '',
   service_time: '',
@@ -365,6 +404,106 @@ const toast = ref({ visible: false, message: '', type: '' })
 let toastTimer = null
 
 /* ======================== */
+/* MAP PICKER               */
+/* ======================== */
+const mapPickerRef   = ref(null)
+const mapSearch      = ref('')
+const mapSearching   = ref(false)
+let   pickerMap      = null
+let   pickerMarker   = null
+
+const DEFAULT_LAT    = 4.7110
+const DEFAULT_LNG    = -74.0721
+
+const initPickerMap = async () => {
+  await nextTick()
+  if (!mapPickerRef.value || pickerMap) return
+
+  const L = (await import('leaflet')).default
+  await import('leaflet/dist/leaflet.css')
+
+  delete L.Icon.Default.prototype._getIconUrl
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl : new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
+    iconUrl       : new URL('leaflet/dist/images/marker-icon.png',    import.meta.url).href,
+    shadowUrl     : new URL('leaflet/dist/images/marker-shadow.png',  import.meta.url).href,
+  })
+
+  const startLat = form.value.lat ?? DEFAULT_LAT
+  const startLng = form.value.lng ?? DEFAULT_LNG
+
+  pickerMap = L.map(mapPickerRef.value, { zoomControl: true }).setView([startLat, startLng], 14)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+  }).addTo(pickerMap)
+
+  pickerMarker = L.marker([startLat, startLng], { draggable: true }).addTo(pickerMap)
+  pickerMarker.bindPopup('Arrastra para ajustar la ubicación').openPopup()
+
+  pickerMarker.on('dragend', async () => {
+    const { lat, lng } = pickerMarker.getLatLng()
+    form.value.lat = lat
+    form.value.lng = lng
+    await reverseGeocode(lat, lng)
+  })
+
+  pickerMap.on('click', async (e) => {
+    const { lat, lng } = e.latlng
+    pickerMarker.setLatLng([lat, lng])
+    form.value.lat = lat
+    form.value.lng = lng
+    await reverseGeocode(lat, lng)
+  })
+}
+
+const reverseGeocode = async (lat, lng) => {
+  try {
+    const res  = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+      { headers: { 'Accept-Language': 'es' } }
+    )
+    const data = await res.json()
+    if (data?.display_name) {
+      const a = data.address ?? {}
+      const parts = [a.road, a.house_number, a.suburb, a.city || a.town || a.village].filter(Boolean)
+      form.value.address = parts.length ? parts.join(', ') : data.display_name
+    }
+  } catch { /* silently ignore */ }
+}
+
+const searchMapAddress = async () => {
+  if (!mapSearch.value.trim()) return
+  mapSearching.value = true
+  try {
+    const res  = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(mapSearch.value)}&limit=1&addressdetails=1`,
+      { headers: { 'Accept-Language': 'es' } }
+    )
+    const data = await res.json()
+    if (data?.length) {
+      const { lat, lon, display_name } = data[0]
+      const latN = parseFloat(lat)
+      const lngN = parseFloat(lon)
+      pickerMarker.setLatLng([latN, lngN])
+      pickerMap.setView([latN, lngN], 16)
+      form.value.lat     = latN
+      form.value.lng     = lngN
+      form.value.address = display_name
+    } else {
+      showToast('No se encontró esa dirección', 'error')
+    }
+  } catch {
+    showToast('Error al buscar la dirección', 'error')
+  } finally {
+    mapSearching.value = false
+  }
+}
+
+const destroyPickerMap = () => {
+  if (pickerMap) { pickerMap.remove(); pickerMap = null; pickerMarker = null }
+}
+
+/* ======================== */
 /* COMPUTED                 */
 /* ======================== */
 const filteredServices = computed(() =>
@@ -385,6 +524,38 @@ const budgetError = computed(() => {
   return parseFloat(form.value.budget) < parseFloat(selectedService.value?.price || 0)
 })
 
+const minDate = computed(() => {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  return d.toISOString().split('T')[0]
+})
+
+/* Time picker 6am–9pm */
+const timeHours   = Array.from({ length: 16 }, (_, i) => i + 6)  // 6..21
+const timeMinutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+
+const timeHour = computed({
+  get: () => {
+    if (!form.value.service_time) return ''
+    return parseInt(form.value.service_time.split(':')[0], 10)
+  },
+  set: (h) => {
+    const m = form.value.service_time ? form.value.service_time.split(':')[1] : '00'
+    form.value.service_time = `${String(h).padStart(2,'0')}:${m}`
+  },
+})
+
+const timeMinute = computed({
+  get: () => {
+    if (!form.value.service_time) return ''
+    return parseInt(form.value.service_time.split(':')[1], 10)
+  },
+  set: (m) => {
+    const h = form.value.service_time ? form.value.service_time.split(':')[0] : '06'
+    form.value.service_time = `${h}:${String(m).padStart(2,'0')}`
+  },
+})
+
 const isVirtual = computed(() =>
   selectedService.value?.name?.toLowerCase().includes('virtual') ?? false
 )
@@ -400,9 +571,10 @@ const showEmpresaStep = computed(() =>
 watch(isVirtual, (val) => {
   currentStep.value = 0
   if (val) {
-    const now = new Date()
-    form.value.service_date = now.toISOString().split('T')[0]
-    form.value.service_time = now.toTimeString().slice(0, 5)
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    form.value.service_date = tomorrow.toISOString().split('T')[0]
+    form.value.service_time = '09:00'
   }
 })
 
@@ -422,7 +594,12 @@ const currentStepName = computed(() => visibleSteps.value[currentStep.value] ?? 
 const stepValid = computed(() => {
   const name = currentStepName.value
   if (name === 'Ubicación')    return !!(form.value.address.trim() && form.value.city_id)
-  if (name === 'Fecha y hora') return !!(form.value.service_date && form.value.service_time)
+  if (name === 'Fecha y hora') {
+    if (!form.value.service_date || !form.value.service_time) return false
+    const [h, m] = form.value.service_time.split(':').map(Number)
+    const totalMin = h * 60 + m
+    return totalMin >= 6 * 60 && totalMin <= 21 * 60
+  }
   if (name === 'Empresa')      return !!(form.value.company_name.trim() && form.value.company_nit.trim())
   if (name === 'Descripción') {
     if (isCapacitacion.value) {
@@ -474,6 +651,8 @@ const resetForm = () => {
     description: '',
     address: '',
     reference: '',
+    lat: null,
+    lng: null,
     city_id: '',
     service_date: '',
     service_time: '',
@@ -488,6 +667,7 @@ const resetForm = () => {
     company_phone: '',
   }
   currentStep.value = 0
+  destroyPickerMap()
 }
 
 /* ======================== */
@@ -568,6 +748,8 @@ const sendRequest = async () => {
       description: form.value.description,
       address: form.value.address || '',
       reference: form.value.reference,
+      lat: form.value.lat,
+      lng: form.value.lng,
       city_id: form.value.city_id || null,
       service_date: form.value.service_date,
       service_time: form.value.service_time,
@@ -597,10 +779,22 @@ const sendRequest = async () => {
   }
 }
 
+watch(currentStepName, (name, prev) => {
+  if (name === 'Ubicación') {
+    initPickerMap()
+  } else if (prev === 'Ubicación') {
+    destroyPickerMap()
+  }
+})
+
 onMounted(() => {
   loadCategories()
   loadServices()
   loadCities()
+})
+
+onUnmounted(() => {
+  destroyPickerMap()
 })
 </script>
 
@@ -1152,12 +1346,12 @@ onMounted(() => {
 
 .step-label {
   text-align: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: #94a3b8;
-  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #2563eb;
+  margin: 8px 0 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
 
 /* Step body */
@@ -1169,6 +1363,56 @@ onMounted(() => {
   min-height: 220px;
 }
 
+.step-body-map {
+  min-height: unset;
+  padding-bottom: 24px;
+}
+
+.map-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.map-search-row .field-input {
+  flex: 1;
+}
+
+.btn-map-search {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 10px;
+  background: #2563eb;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-map-search:hover { background: #1d4ed8; }
+.btn-map-search:disabled { background: #93c5fd; cursor: not-allowed; }
+
+.spin-sm {
+  display: inline-block;
+  animation: spin 0.7s linear infinite;
+  font-size: 18px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.map-picker {
+  width: 100%;
+  height: 240px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid #e2e8f0;
+  z-index: 0;
+}
+
 .field-label {
   font-size: 12px;
   font-weight: 700;
@@ -1177,6 +1421,14 @@ onMounted(() => {
   margin-bottom: -6px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
+}
+
+.field-label-big {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1e293b;
+  display: block;
+  margin-bottom: -4px;
 }
 
 .field-input,
@@ -1217,6 +1469,24 @@ onMounted(() => {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.time-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-select {
+  flex: 1;
+}
+
+.time-sep {
+  font-size: 20px;
+  font-weight: 700;
+  color: #334155;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .field-hint {
