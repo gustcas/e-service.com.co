@@ -97,6 +97,7 @@
               <th class="hide-sm">Creado</th>
               <th class="hide-sm">Actualizado</th>
               <th class="hide-sm">Tiempo</th>
+              <th>Detalle</th>
             </tr>
           </thead>
           <tbody>
@@ -149,6 +150,13 @@
                 <span :class="['elapsed-badge', req.elapsed.includes('h') || req.elapsed.includes('d') ? 'slow' : '']">
                   {{ req.elapsed }}
                 </span>
+              </td>
+              <td>
+                <button class="btn-eye" @click="openDetail(req)" title="Ver detalle">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
               </td>
             </tr>
           </tbody>
@@ -350,10 +358,117 @@
               <span class="status-dot"></span>
               {{ statusLabel(inc.status) }}
             </span>
+            <button class="btn-reassign" @click="openReassign(inc)">↺ Reasignar</button>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- MODAL: Detalle de Solicitud                              -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="detailModal.open" class="chat-overlay" @click.self="detailModal.open = false">
+          <div class="detail-modal">
+            <div class="chat-header">
+              <div class="chat-header-left">
+                <span class="req-id-badge" style="font-size:14px">#{{ String(detailModal.req.id).padStart(4,'0') }}</span>
+                <span style="font-size:15px;font-weight:700;margin-left:8px">{{ detailModal.req.service_name }}</span>
+              </div>
+              <button class="chat-close-btn" @click="detailModal.open = false">✕</button>
+            </div>
+            <div class="detail-body">
+              <div class="detail-section">
+                <div class="detail-section-title">👤 Cliente</div>
+                <div class="detail-row"><span>Nombre</span><strong>{{ detailModal.req.client_name }}</strong></div>
+                <div class="detail-row"><span>Email</span><strong>{{ detailModal.req.client_email }}</strong></div>
+                <div class="detail-row">
+                  <span>Estado conexión</span>
+                  <span :class="['online-pill', detailModal.req.client_online ? 'on' : 'off']">
+                    {{ detailModal.req.client_online ? 'En línea' : 'Desconectado' }}
+                  </span>
+                </div>
+              </div>
+              <div class="detail-section">
+                <div class="detail-section-title">💼 Profesional</div>
+                <template v-if="detailModal.req.professional_name">
+                  <div class="detail-row"><span>Nombre</span><strong>{{ detailModal.req.professional_name }}</strong></div>
+                  <div class="detail-row"><span>Email</span><strong>{{ detailModal.req.professional_email }}</strong></div>
+                  <div class="detail-row">
+                    <span>Estado conexión</span>
+                    <span :class="['online-pill', detailModal.req.professional_online ? 'on' : 'off']">
+                      {{ detailModal.req.professional_online ? 'En línea' : 'Desconectado' }}
+                    </span>
+                  </div>
+                </template>
+                <div v-else class="detail-row"><span>Asignado</span><strong>Sin asignar</strong></div>
+              </div>
+              <div class="detail-section">
+                <div class="detail-section-title">📋 Solicitud</div>
+                <div class="detail-row"><span>Estado</span>
+                  <span :class="['status-badge', statusClass(detailModal.req.status)]">
+                    <span class="status-dot"></span>{{ statusLabel(detailModal.req.status) }}
+                  </span>
+                </div>
+                <div class="detail-row"><span>Presupuesto</span><strong>${{ Number(detailModal.req.budget||0).toLocaleString('es-CO') }}</strong></div>
+                <div v-if="detailModal.req.description" class="detail-row"><span>Descripción</span><strong>{{ detailModal.req.description }}</strong></div>
+                <div v-if="detailModal.req.address" class="detail-row"><span>Dirección</span><strong>{{ detailModal.req.address }}</strong></div>
+                <div v-if="detailModal.req.service_date" class="detail-row"><span>Fecha</span><strong>{{ detailModal.req.service_date }}</strong></div>
+                <div v-if="detailModal.req.service_time" class="detail-row"><span>Hora</span><strong>{{ detailModal.req.service_time }}</strong></div>
+                <div v-if="detailModal.req.people_count" class="detail-row"><span>Personas</span><strong>{{ detailModal.req.people_count }}</strong></div>
+                <div class="detail-row"><span>Creado</span><strong>{{ detailModal.req.created_at }}</strong></div>
+                <div class="detail-row"><span>Actualizado</span><strong>{{ detailModal.req.updated_at }}</strong></div>
+                <div class="detail-row"><span>Tiempo</span><strong>{{ detailModal.req.elapsed }}</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- MODAL: Reasignación de Incidencia                        -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="reassignModal.open" class="chat-overlay" @click.self="reassignModal.open = false">
+          <div class="detail-modal">
+            <div class="chat-header">
+              <div class="chat-header-left">
+                <span style="font-size:15px;font-weight:700">↺ Reasignar Sol. #{{ String(reassignModal.incidentId).padStart(4,'0') }}</span>
+              </div>
+              <button class="chat-close-btn" @click="reassignModal.open = false">✕</button>
+            </div>
+            <div class="detail-body">
+              <p style="font-size:13px;color:#64748b;margin:0 0 12px">Selecciona un profesional disponible (en línea, con capacidad para este servicio):</p>
+              <div v-if="reassignModal.loading" style="text-align:center;padding:24px;color:#94a3b8">Buscando profesionales...</div>
+              <div v-else-if="reassignModal.professionals.length === 0" style="text-align:center;padding:24px;color:#94a3b8">
+                No hay profesionales disponibles en línea para este servicio.
+              </div>
+              <div v-else class="reassign-list">
+                <div v-for="p in reassignModal.professionals" :key="p.id"
+                  :class="['reassign-item', { selected: reassignModal.selectedId === p.id }]"
+                  @click="reassignModal.selectedId = p.id">
+                  <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`" class="user-avatar" />
+                  <span class="user-name">{{ p.name }}</span>
+                  <span v-if="reassignModal.selectedId === p.id" style="margin-left:auto;color:#2563eb;font-weight:800">✓</span>
+                </div>
+              </div>
+              <div v-if="reassignModal.error" class="error-banner" style="margin-top:8px">{{ reassignModal.error }}</div>
+              <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+                <button class="btn-refresh" @click="reassignModal.open = false">Cancelar</button>
+                <button class="btn-reassign-confirm"
+                  :disabled="!reassignModal.selectedId || reassignModal.saving"
+                  @click="confirmReassign">
+                  {{ reassignModal.saving ? 'Asignando...' : '✓ Confirmar asignación' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- ══════════════════════════════════════════════════════════ -->
     <!-- MODAL: Visor de Chat (solo lectura)                      -->
@@ -591,6 +706,45 @@ const refreshAll = async () => {
 
 // ── Helpers ───────────────────────────────────────────────────
 const truncate = (str, len) => str && str.length > len ? str.slice(0, len) + '…' : str
+
+// ── Detail Modal ─────────────────────────────────────────────
+const detailModal = ref({ open: false, req: {} })
+const openDetail = (req) => { detailModal.value = { open: true, req } }
+
+// ── Reassign Modal ────────────────────────────────────────────
+const reassignModal = ref({
+  open: false, loading: false, saving: false,
+  incidentId: null, professionals: [], selectedId: null, error: '',
+})
+
+const openReassign = async (inc) => {
+  reassignModal.value = { open: true, loading: true, saving: false, incidentId: inc.id, professionals: [], selectedId: null, error: '' }
+  try {
+    const { data } = await api.get(`/admin/live-services/requests/${inc.id}/available-professionals`)
+    reassignModal.value.professionals = data.professionals
+  } catch {
+    reassignModal.value.error = 'Error al cargar profesionales disponibles.'
+  } finally {
+    reassignModal.value.loading = false
+  }
+}
+
+const confirmReassign = async () => {
+  if (!reassignModal.value.selectedId) return
+  reassignModal.value.saving = true
+  reassignModal.value.error  = ''
+  try {
+    await api.post(`/admin/live-services/requests/${reassignModal.value.incidentId}/reassign`, {
+      professional_id: reassignModal.value.selectedId,
+    })
+    reassignModal.value.open = false
+    await refreshAll()
+  } catch (e) {
+    reassignModal.value.error = e.response?.data?.message || 'Error al reasignar.'
+  } finally {
+    reassignModal.value.saving = false
+  }
+}
 
 // ── Chat Viewer ───────────────────────────────────────────────
 const chatBodyRef = ref(null)
@@ -912,6 +1066,72 @@ onUnmounted(() => clearInterval(pollTimer))
   transition: background .15s, transform .15s;
 }
 .msg-count-btn:hover { background: #dbeafe; transform: scale(1.05); }
+
+/* ── Eye button ─────────────────────────────────────────────── */
+.btn-eye {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 8px;
+  background: #eff6ff; border: 1.5px solid #bfdbfe;
+  color: #2563eb; cursor: pointer; transition: background 0.15s;
+}
+.btn-eye:hover { background: #dbeafe; }
+
+/* ── Reassign button ─────────────────────────────────────────── */
+.btn-reassign {
+  font-size: 11px; font-weight: 700; color: #d97706;
+  background: #fffbeb; border: 1.5px solid #fde68a;
+  padding: 5px 10px; border-radius: 8px; cursor: pointer; font-family: inherit;
+  transition: background 0.15s; white-space: nowrap;
+}
+.btn-reassign:hover { background: #fef3c7; }
+
+.btn-reassign-confirm {
+  font-size: 12px; font-weight: 700; color: white;
+  background: #2563eb; border: none; padding: 8px 16px;
+  border-radius: 10px; cursor: pointer; font-family: inherit;
+  transition: background 0.15s;
+}
+.btn-reassign-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-reassign-confirm:not(:disabled):hover { background: #1d4ed8; }
+
+/* ── Detail & Reassign Modals ────────────────────────────────── */
+.detail-modal {
+  background: #fff; border-radius: 18px;
+  width: 100%; max-width: 520px; max-height: 90vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+.detail-body {
+  padding: 16px 20px 20px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.detail-section { display: flex; flex-direction: column; gap: 6px; }
+.detail-section-title {
+  font-size: 11px; font-weight: 800; color: #2563eb;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding-bottom: 4px; border-bottom: 1.5px solid #e2e8f0;
+}
+.detail-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: #475569; gap: 8px;
+}
+.detail-row strong { color: #0f172a; font-weight: 700; text-align: right; max-width: 60%; word-break: break-word; }
+.online-pill {
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+}
+.online-pill.on  { background: #dcfce7; color: #166534; }
+.online-pill.off { background: #f1f5f9; color: #64748b; }
+
+/* ── Reassign list ───────────────────────────────────────────── */
+.reassign-list { display: flex; flex-direction: column; gap: 6px; }
+.reassign-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  border: 1.5px solid #e2e8f0; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.reassign-item:hover { border-color: #bfdbfe; background: #f0f9ff; }
+.reassign-item.selected { border-color: #2563eb; background: #eff6ff; }
 
 /* ── Chat Viewer Modal ───────────────────────────────────────── */
 .chat-overlay {
