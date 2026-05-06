@@ -175,7 +175,7 @@
                 Cerrar
               </button>
 
-              <button class="btn-go" @click="viewDistance(selectedRequest)">
+              <button class="btn-go" @click="viewRouteFromModal(selectedRequest)">
                 Ver ruta
               </button>
             </div>
@@ -288,6 +288,11 @@ const drawRoute = async (from, to) => {
 const openDetails = (req) => {
   selectedRequest.value = req
   showDetailsModal.value = true
+}
+
+const viewRouteFromModal = (req) => {
+  showDetailsModal.value = false
+  viewDistance(req)
 }
 
 /* ======================= */
