@@ -66,7 +66,10 @@
       <div v-for="req in paginated" :key="req.id" class="req-card" :class="req.status">
 
         <!-- Status badge -->
-        <span :class="['status-pill', req.status]">{{ statusLabel(req.status) }}</span>
+        <div class="card-top-row">
+          <span class="req-number">#{{ String(req.id).padStart(4, '0') }}</span>
+          <span :class="['status-pill', req.status]">{{ statusLabel(req.status) }}</span>
+        </div>
 
         <!-- Cabecera: icono + nombre servicio -->
         <div class="card-head">
@@ -512,9 +515,22 @@ onUnmounted(() => clearInterval(unreadTimer))
 .req-card.accepted  { border-color: #bfdbfe; }
 .req-card.completed { border-color: #bbf7d0; background: #f0fdf4; }
 
+/* Card top row: number + status */
+.card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.req-number {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.3px;
+}
+
 /* Status pill */
 .status-pill {
-  position: absolute; top: 12px; right: 12px;
   font-size: 10px; font-weight: 800; letter-spacing: .4px;
   text-transform: uppercase; padding: 3px 9px; border-radius: 6px;
 }

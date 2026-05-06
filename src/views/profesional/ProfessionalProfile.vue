@@ -13,6 +13,10 @@
         <div>
           <h2>Mi Perfil Profesional</h2>
           <p>Tu perfil quedará pendiente hasta verificación del administrador</p>
+          <div class="verification-status" :class="verificationStatusClass">
+            <span class="vs-dot"></span>
+            {{ verificationStatusLabel }}
+          </div>
         </div>
       </div>
 
@@ -149,7 +153,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, computed, onMounted } from "vue"
 import categoryService from "@/services/categoryService"
 import api from "@/services/api"
 
@@ -157,6 +161,20 @@ const categories = ref([])
 const saving = ref(false)
 const message = ref(null)
 const errors = ref({})
+const professionalStatus = ref(null)
+const professionalVerified = ref(false)
+
+const verificationStatusLabel = computed(() => {
+  if (professionalVerified.value) return 'Verificado como profesional'
+  if (professionalStatus.value === 'pending') return 'Por verificar'
+  if (professionalStatus.value === 'under_review') return 'En curso de verificación'
+  return 'Por verificar'
+})
+const verificationStatusClass = computed(() => {
+  if (professionalVerified.value) return 'vs-verified'
+  if (professionalStatus.value === 'under_review') return 'vs-review'
+  return 'vs-pending'
+})
 const photoPreview = ref(null)
 
 const services = ref([])
@@ -236,6 +254,9 @@ const loadProfile = async () => {
     if (response.data.professional) {
       const professional = response.data.professional
 
+      professionalStatus.value  = professional.status
+      professionalVerified.value = professional.is_verified
+
       form.value.category_id = professional.category_id
       form.value.document_number = professional.document_number
       form.value.phone = professional.phone
@@ -295,6 +316,10 @@ const saveProfile = async () => {
     )
 
     message.value = response.data.message
+
+    // Siempre que se guarda, vuelve a pendiente de verificación
+    professionalStatus.value  = 'pending'
+    professionalVerified.value = false
 
   } catch (error) {
     if (error.response?.status === 422) {
@@ -358,6 +383,26 @@ onMounted(async () => {
   margin-top: 6px;
   font-size: 14px;
 }
+
+.verification-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+.vs-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.verification-status.vs-verified { background: #dcfce7; color: #166534; }
+.verification-status.vs-verified .vs-dot { background: #22c55e; }
+.verification-status.vs-review   { background: #fef9c3; color: #854d0e; }
+.verification-status.vs-review   .vs-dot { background: #f59e0b; }
+.verification-status.vs-pending  { background: #f1f5f9; color: #475569; }
+.verification-status.vs-pending  .vs-dot { background: #94a3b8; }
 
 .profile-avatar {
   width: 110px;

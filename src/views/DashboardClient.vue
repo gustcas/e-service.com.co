@@ -180,7 +180,7 @@ const navItems = [
   {
     id: 'dashboard',
     icon: '🏠',
-    label: 'Dashboard',
+    label: 'Panel de Solicitudes',
     route: { name: 'ClienteHome' }
   },
   {

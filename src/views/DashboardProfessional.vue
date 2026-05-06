@@ -25,7 +25,7 @@
 
         <router-link :to="{ name: 'ProfessionalHome' }" class="nav-item">
           <span class="nav-icon">🏠</span>
-          <span class="nav-label">Dashboard</span>
+          <span class="nav-label">Panel de Servicio</span>
         </router-link>
 
         <router-link :to="{ name: 'ProfileProfesional' }" class="nav-item">
