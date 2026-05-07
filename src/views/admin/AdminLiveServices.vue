@@ -373,8 +373,8 @@
           <div class="detail-modal">
             <div class="chat-header">
               <div class="chat-header-left">
-                <span class="req-id-badge" style="font-size:14px">#{{ String(detailModal.req.id).padStart(4,'0') }}</span>
-                <span style="font-size:15px;font-weight:700;margin-left:8px">{{ detailModal.req.service_name }}</span>
+                <span style="font-size:14px;font-weight:800;color:#fff;opacity:1">#{{ String(detailModal.req.id).padStart(4,'0') }}</span>
+                <span style="font-size:15px;font-weight:700;margin-left:8px;color:#fff">{{ detailModal.req.service_name }}</span>
               </div>
               <button class="chat-close-btn" @click="detailModal.open = false">✕</button>
             </div>
@@ -420,6 +420,32 @@
                 <div class="detail-row"><span>Creado</span><strong>{{ detailModal.req.created_at }}</strong></div>
                 <div class="detail-row"><span>Actualizado</span><strong>{{ detailModal.req.updated_at }}</strong></div>
                 <div class="detail-row"><span>Tiempo</span><strong>{{ detailModal.req.elapsed }}</strong></div>
+              </div>
+
+              <!-- EVIDENCIAS -->
+              <div class="detail-section">
+                <div class="detail-section-title">📎 Evidencias del servicio</div>
+                <div v-if="detailModal.loadingEvidences" style="padding:12px 0;color:#94a3b8;font-size:13px">Cargando evidencias...</div>
+                <div v-else-if="!detailModal.evidences.length" style="padding:12px 0;color:#94a3b8;font-size:13px">Sin evidencias registradas.</div>
+                <div v-else class="evidence-grid">
+                  <a
+                    v-for="(ev, i) in detailModal.evidences"
+                    :key="i"
+                    :href="ev.url"
+                    target="_blank"
+                    class="evidence-thumb"
+                    :title="ev.description || ev.file_name"
+                  >
+                    <img v-if="ev.is_image" :src="ev.url" :alt="ev.file_name" />
+                    <div v-else class="evidence-file">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      <span>{{ ev.file_name }}</span>
+                    </div>
+                    <div v-if="ev.description" class="evidence-desc">{{ ev.description }}</div>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -708,8 +734,24 @@ const refreshAll = async () => {
 const truncate = (str, len) => str && str.length > len ? str.slice(0, len) + '…' : str
 
 // ── Detail Modal ─────────────────────────────────────────────
-const detailModal = ref({ open: false, req: {} })
-const openDetail = (req) => { detailModal.value = { open: true, req } }
+const detailModal = ref({ open: false, req: {}, evidences: [], loadingEvidences: false })
+
+const openDetail = async (req) => {
+  detailModal.value = { open: true, req, evidences: [], loadingEvidences: true }
+  try {
+    const { data } = await api.get(`/admin/live-services/requests/${req.id}/evidences`)
+    detailModal.value.evidences = (Array.isArray(data) ? data : []).map(ev => ({
+      url       : ev.file_url,
+      file_name : ev.file_url?.split('/').pop() ?? 'archivo',
+      is_image  : ev.file_type === 'image',
+      description: ev.note ?? '',
+    }))
+  } catch {
+    detailModal.value.evidences = []
+  } finally {
+    detailModal.value.loadingEvidences = false
+  }
+}
 
 // ── Reassign Modal ────────────────────────────────────────────
 const reassignModal = ref({
@@ -1146,6 +1188,60 @@ onUnmounted(() => clearInterval(pollTimer))
   display: flex; flex-direction: column;
   box-shadow: 0 24px 80px rgba(0,0,0,.25); overflow: hidden;
 }
+/* Header blanco para modal de detalle */
+.detail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1.5px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.req-id-badge-dark {
+  font-size: 13px; font-weight: 800; color: #2563eb;
+  background: #eff6ff; padding: 3px 10px; border-radius: 8px;
+}
+
+.detail-close-btn {
+  background: #f1f5f9; border: none; color: #64748b;
+  width: 30px; height: 30px; border-radius: 50%; font-size: 13px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.detail-close-btn:hover { background: #e2e8f0; }
+
+/* Grilla de evidencias */
+.evidence-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px; padding: 8px 0;
+}
+
+.evidence-thumb {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden;
+  text-decoration: none; transition: border-color .15s, box-shadow .15s;
+  background: #f8fafc;
+}
+.evidence-thumb:hover { border-color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,.12); }
+
+.evidence-thumb img {
+  width: 100%; height: 80px; object-fit: cover;
+}
+
+.evidence-file {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 8px; color: #64748b;
+}
+.evidence-file span {
+  font-size: 10px; text-align: center; word-break: break-all; color: #475569;
+}
+
+.evidence-desc {
+  font-size: 10px; color: #94a3b8; padding: 4px 6px;
+  text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  width: 100%;
+}
+
 .chat-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 18px;

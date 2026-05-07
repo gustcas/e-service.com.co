@@ -145,6 +145,9 @@ let heartbeatTimer = null
 onMounted(() => {
   api.get('/heartbeat').catch(() => {})
   heartbeatTimer = setInterval(() => api.get('/heartbeat').catch(() => {}), 30000)
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(() => {}, () => {})
+  }
 })
 onUnmounted(() => clearInterval(heartbeatTimer))
 

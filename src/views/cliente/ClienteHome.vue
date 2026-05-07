@@ -26,7 +26,10 @@
     <!-- CATEGORÍAS GRID          -->
     <!-- ======================== -->
     <div class="section-header">
-      <h2 class="section-title">Categorías</h2>
+      <div class="section-title-row">
+        <button v-if="navLevel > 0" class="nav-back-btn" @click="navGoBack">‹ Volver</button>
+        <h2 class="section-title">Categorías</h2>
+      </div>
       <span class="section-count">{{ categories.length }} disponibles</span>
     </div>
 
@@ -34,6 +37,48 @@
       <div v-for="n in 6" :key="n" class="skeleton-cat"></div>
     </div>
 
+    <!-- NIVEL 0: Grupos principales -->
+    <div v-else-if="navLevel === 0" class="categories-grid nav-2col">
+      <button
+        v-for="grp in mainGroups"
+        :key="grp.id"
+        class="category-card"
+        :class="[grp.colorClass, { 'nav-disabled': grp.comingSoon }]"
+        @click="selectMainGroup(grp)"
+      >
+        <div class="cat-icon-wrap">
+          <span class="cat-emoji">{{ grp.icon }}</span>
+        </div>
+        <div class="cat-text">
+          <span class="cat-name">{{ grp.name }}</span>
+          <span v-if="grp.comingSoon" class="cat-soon">Próximamente disponible</span>
+        </div>
+        <div class="cat-arrow" :style="grp.comingSoon ? 'opacity:0.35' : ''">→</div>
+      </button>
+    </div>
+
+    <!-- NIVEL 1: Sub-grupos -->
+    <div v-else-if="navLevel === 1" class="categories-grid nav-2col">
+      <button
+        v-for="sub in currentSubGroups"
+        :key="sub.id"
+        class="category-card"
+        :class="[sub.colorClass, { 'nav-disabled': !sub.hasCategories }]"
+        @click="selectSubGroup(sub)"
+      >
+        <div class="cat-icon-wrap">
+          <span class="cat-emoji">{{ sub.icon }}</span>
+        </div>
+        <div class="cat-text">
+          <span class="cat-brand">{{ sub.brand }}</span>
+          <span class="cat-name">{{ sub.name }}</span>
+          <span v-if="!sub.hasCategories" class="cat-soon">Próximamente disponible</span>
+        </div>
+        <div class="cat-arrow" :style="!sub.hasCategories ? 'opacity:0.35' : ''">→</div>
+      </button>
+    </div>
+
+    <!-- NIVEL 2: Grilla real de categorías -->
     <div v-else class="categories-grid">
       <button v-for="cat in categories" :key="cat.id" class="category-card" @click="openCategoryModal(cat)">
         <div class="cat-icon-wrap">
@@ -187,30 +232,50 @@
           <div v-if="currentStepName === 'Ubicación'" class="step-body step-body-map">
             <label class="field-label-big">📍 Ubicación para el servicio</label>
 
-            <!-- Buscador de dirección -->
-            <div class="map-search-row">
-              <input
-                v-model="mapSearch"
-                class="field-input"
-                placeholder="Busca la dirección o arrastra el pin..."
-                @keyup.enter="searchMapAddress"
-              />
-              <button class="btn-map-search" :disabled="mapSearching" @click="searchMapAddress">
-                <svg v-if="!mapSearching" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                </svg>
-                <span v-else class="spin-sm">⟳</span>
-              </button>
+            <!-- Buscador con autocompletado -->
+            <div class="map-search-wrap">
+              <div class="map-search-row">
+                <input
+                  v-model="mapSearch"
+                  class="field-input"
+                  placeholder="Busca tu dirección, ej: Calle 68 Bogotá"
+                  autocomplete="off"
+                  @input="onMapSearchInput"
+                  @keyup.enter="searchMapAddress"
+                  @keydown.escape="mapSuggestions = []"
+                  @blur="onSearchBlur"
+                  @focus="mapSearch && mapSuggestions.length && (showSuggestions = true)"
+                />
+                <button class="btn-map-search" :disabled="mapSearching" @click="searchMapAddress">
+                  <svg v-if="!mapSearching" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <span v-else class="spin-sm">⟳</span>
+                </button>
+              </div>
+
+              <!-- Dropdown de sugerencias -->
+              <div v-if="showSuggestions && mapSuggestions.length" class="suggestions-dropdown">
+                <div
+                  v-for="(s, i) in mapSuggestions"
+                  :key="i"
+                  class="suggestion-item"
+                  @mousedown.prevent="selectSuggestion(s)"
+                >
+                  <svg class="sug-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <div class="sug-text">
+                    <span class="sug-main">{{ s.main }}</span>
+                    <span class="sug-secondary">{{ s.secondary }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Mapa -->
             <div ref="mapPickerRef" class="map-picker"></div>
-
-            <!-- Dirección seleccionada (editable) -->
-            <div>
-              <label class="field-label">Dirección detectada</label>
-              <input v-model="form.address" class="field-input" placeholder="Dirección del servicio" />
-            </div>
 
             <label class="field-label">🗺️ Referencia adicional</label>
             <input v-model="form.reference" class="field-input" placeholder="Ej: frente al parque, edificio azul" />
@@ -406,11 +471,14 @@ let toastTimer = null
 /* ======================== */
 /* MAP PICKER               */
 /* ======================== */
-const mapPickerRef   = ref(null)
-const mapSearch      = ref('')
-const mapSearching   = ref(false)
-let   pickerMap      = null
-let   pickerMarker   = null
+const mapPickerRef    = ref(null)
+const mapSearch       = ref('')
+const mapSearching    = ref(false)
+const mapSuggestions  = ref([])
+const showSuggestions = ref(false)
+let   pickerMap       = null
+let   pickerMarker    = null
+let   searchDebounce  = null
 
 const DEFAULT_LAT    = 4.7110
 const DEFAULT_LNG    = -74.0721
@@ -456,41 +524,81 @@ const initPickerMap = async () => {
   })
 }
 
+const geocodeProxy = (params) => {
+  const qs = new URLSearchParams(params).toString()
+  return api.get(`/geocode?${qs}`).then(r => r.data).catch(() => null)
+}
+
 const reverseGeocode = async (lat, lng) => {
+  const data = await geocodeProxy({ type: 'reverse', lat, lng })
+  if (data?.display_name) {
+    const a = data.address ?? {}
+    const parts = [
+      a.house_number ? `${a.road ?? ''} # ${a.house_number}` : (a.road ?? ''),
+      a.suburb || a.neighbourhood || '',
+      a.city || a.town || a.village || '',
+    ].filter(Boolean)
+    form.value.address = parts.length ? parts.join(', ') : data.display_name
+  }
+}
+
+/* Devuelve el query tal como lo escribió el usuario — el backend agrega Colombia */
+const buildSearchQuery = (q) => q.trim()
+
+const buildSuggestionLabel = (r) => {
+  const a         = r.address ?? {}
+  const main      = a.road || r.display_name.split(',')[0] || ''
+  const secondary = [a.suburb, a.city].filter(Boolean).join(', ')
+  return { main, secondary }
+}
+
+const onMapSearchInput = () => {
+  clearTimeout(searchDebounce)
+  const q = mapSearch.value.trim()
+  if (q.length < 3) { mapSuggestions.value = []; showSuggestions.value = false; return }
+  searchDebounce = setTimeout(() => fetchSuggestions(q), 400)
+}
+
+const fetchSuggestions = async (q) => {
   try {
-    const res  = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-      { headers: { 'Accept-Language': 'es' } }
-    )
-    const data = await res.json()
-    if (data?.display_name) {
-      const a = data.address ?? {}
-      const parts = [a.road, a.house_number, a.suburb, a.city || a.town || a.village].filter(Boolean)
-      form.value.address = parts.length ? parts.join(', ') : data.display_name
-    }
-  } catch { /* silently ignore */ }
+    const data = await geocodeProxy({ type: 'search', q: buildSearchQuery(q), limit: 6 }) ?? []
+    mapSuggestions.value  = data.map(r => ({ ...buildSuggestionLabel(r), lat: parseFloat(r.lat), lng: parseFloat(r.lon), full: r.display_name }))
+    showSuggestions.value = mapSuggestions.value.length > 0
+  } catch { /* ignore */ }
+}
+
+const selectSuggestion = (s) => {
+  mapSearch.value       = [s.main, s.secondary].filter(Boolean).join(', ')
+  form.value.address    = s.main + (s.secondary ? ', ' + s.secondary : '')
+  form.value.lat        = s.lat
+  form.value.lng        = s.lng
+  mapSuggestions.value  = []
+  showSuggestions.value = false
+  if (pickerMarker && pickerMap) {
+    pickerMarker.setLatLng([s.lat, s.lng])
+    pickerMap.setView([s.lat, s.lng], 17)
+  }
 }
 
 const searchMapAddress = async () => {
   if (!mapSearch.value.trim()) return
-  mapSearching.value = true
+  mapSuggestions.value  = []
+  showSuggestions.value = false
+  mapSearching.value    = true
   try {
-    const res  = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(mapSearch.value)}&limit=1&addressdetails=1`,
-      { headers: { 'Accept-Language': 'es' } }
-    )
-    const data = await res.json()
+    const data = await geocodeProxy({ type: 'search', q: buildSearchQuery(mapSearch.value), limit: 1 })
     if (data?.length) {
-      const { lat, lon, display_name } = data[0]
-      const latN = parseFloat(lat)
-      const lngN = parseFloat(lon)
+      const r    = data[0]
+      const latN = parseFloat(r.lat)
+      const lngN = parseFloat(r.lon)
+      const { main, secondary } = buildSuggestionLabel(r)
       pickerMarker.setLatLng([latN, lngN])
-      pickerMap.setView([latN, lngN], 16)
+      pickerMap.setView([latN, lngN], 17)
       form.value.lat     = latN
       form.value.lng     = lngN
-      form.value.address = display_name
+      form.value.address = [main, secondary].filter(Boolean).join(', ')
     } else {
-      showToast('No se encontró esa dirección', 'error')
+      showToast('No se encontró. Prueba con más detalle o arrastra el pin.', 'error')
     }
   } catch {
     showToast('Error al buscar la dirección', 'error')
@@ -499,8 +607,14 @@ const searchMapAddress = async () => {
   }
 }
 
+const onSearchBlur = () => {
+  setTimeout(() => { showSuggestions.value = false }, 150)
+}
+
 const destroyPickerMap = () => {
   if (pickerMap) { pickerMap.remove(); pickerMap = null; pickerMarker = null }
+  mapSuggestions.value  = []
+  showSuggestions.value = false
 }
 
 /* ======================== */
@@ -668,6 +782,76 @@ const resetForm = () => {
   }
   currentStep.value = 0
   destroyPickerMap()
+}
+
+/* ======================== */
+/* NAVEGACIÓN POR NIVELES   */
+/* ======================== */
+const navLevel = ref(0)
+const selectedMainGroup = ref(null)
+
+const mainGroups = [
+  {
+    id: 'empresariales',
+    name: 'SERVICIO EMPRESARIALES',
+    icon: '🏢',
+    colorClass: 'nav-blue',
+    hasSubGroups: true,
+  },
+  {
+    id: 'domesticos',
+    name: 'SERVICIO DOMÉSTICOS',
+    icon: '🔧',
+    colorClass: 'nav-green',
+    hasSubGroups: false,
+    comingSoon: true,
+  },
+]
+
+const navSubGroups = {
+  empresariales: [
+    {
+      id: 'empresas_alimentos',
+      brand: 'Ase Calidad:',
+      name: 'Servicios de asesoría en documentación en empresas y alimentos',
+      icon: '📋',
+      colorClass: 'nav-purple',
+      hasCategories: true,
+    },
+    {
+      id: 'establecimientos',
+      brand: 'Ase Calidad',
+      name: 'Servicios de asesoría en documentación y normativas de establecimientos de comercio',
+      icon: '🏪',
+      colorClass: 'nav-pink',
+      hasCategories: false,
+    },
+  ],
+}
+
+const currentSubGroups = computed(() =>
+  selectedMainGroup.value ? (navSubGroups[selectedMainGroup.value.id] ?? []) : []
+)
+
+const selectMainGroup = (grp) => {
+  if (grp.comingSoon) return
+  selectedMainGroup.value = grp
+  navLevel.value = grp.hasSubGroups ? 1 : 2
+}
+
+const selectSubGroup = (sub) => {
+  if (!sub.hasCategories) return
+  navLevel.value = 2
+}
+
+const navGoBack = () => {
+  if (navLevel.value === 2) {
+    navLevel.value = selectedMainGroup.value?.hasSubGroups ? 1 : 0
+    if (!selectedMainGroup.value?.hasSubGroups) selectedMainGroup.value = null
+  } else if (navLevel.value === 1) {
+    navLevel.value = 0
+    selectedMainGroup.value = null
+  }
 }
 
 /* ======================== */
@@ -968,6 +1152,78 @@ onUnmounted(() => {
   gap: 14px;
   align-items: stretch;
 }
+
+/* Grid de 2 columnas para niveles 0 y 1 */
+.nav-2col {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 780px;
+}
+
+/* Botón volver */
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-back-btn:hover { background: #e2e8f0; color: #1e293b; }
+
+/* Colores explícitos para tarjetas de navegación */
+.nav-blue::before  { background: linear-gradient(90deg, #3b82f6, #2563eb) !important; }
+.nav-green::before { background: linear-gradient(90deg, #10b981, #059669) !important; }
+.nav-purple::before{ background: linear-gradient(90deg, #8b5cf6, #7c3aed) !important; }
+.nav-pink::before  { background: linear-gradient(90deg, #ec4899, #db2777) !important; }
+
+.nav-blue  .cat-icon-wrap { background: #eff6ff; }
+.nav-green .cat-icon-wrap { background: #f0fdf4; }
+.nav-purple.cat-icon-wrap,
+.nav-purple .cat-icon-wrap { background: #f5f3ff; }
+.nav-pink  .cat-icon-wrap { background: #fdf2f8; }
+
+/* Sub-grupo: etiqueta de marca */
+.cat-brand {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 3px;
+}
+
+/* Texto "Próximamente" */
+.cat-soon {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f59e0b;
+  background: #fffbeb;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+/* Tarjeta deshabilitada */
+.nav-disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+.nav-disabled:hover { transform: none !important; box-shadow: none !important; }
 
 .category-card {
   display: flex;
@@ -1368,6 +1624,10 @@ onUnmounted(() => {
   padding-bottom: 24px;
 }
 
+.map-search-wrap {
+  position: relative;
+}
+
 .map-search-row {
   display: flex;
   gap: 8px;
@@ -1376,6 +1636,66 @@ onUnmounted(() => {
 
 .map-search-row .field-input {
   flex: 1;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background: #f8fafc;
+}
+
+.sug-icon {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.sug-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sug-main {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sug-secondary {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .btn-map-search {

@@ -22,43 +22,93 @@
 
       <div class="form-grid">
 
-        <!-- Categoría -->
-        <div class="form-group">
-          <label>Especialidad *</label>
-          <select v-model="form.category_id" @change="filterServices(true)">
-            <option value="" disabled>Selecciona una categoría</option>
-            <option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.name }}
-            </option>
-          </select>
-          <small v-if="errors.category_id" class="error">{{ errors.category_id[0] }}</small>
+        <!-- Especialidades — dropdown multi-selección con checkboxes -->
+        <div class="form-group full" ref="catDropdownRef">
+          <label>Especialidades * <small style="font-weight:400;color:#64748b">(puedes elegir varias)</small></label>
+
+          <!-- Trigger / Campo visible -->
+          <div class="ms-field" :class="{ open: catOpen }" @click="catOpen = !catOpen">
+            <span v-if="!form.category_ids.length" class="ms-placeholder">Selecciona especialidades...</span>
+            <span v-else class="ms-label-text">{{ selectedCategoryLabel }}</span>
+            <div class="ms-icons">
+              <button v-if="form.category_ids.length" type="button" class="ms-clear" @click.stop="form.category_ids = []; form.service_ids = []" title="Limpiar">×</button>
+              <span class="ms-chevron" :class="{ rotated: catOpen }">▼</span>
+            </div>
+          </div>
+
+          <!-- Dropdown -->
+          <div v-if="catOpen" class="ms-dropdown">
+            <!-- Fila de búsqueda + limpiar todo -->
+            <div class="ms-header-row" @click.stop>
+              <span
+                class="ms-checkbox"
+                :class="{ checked: allCatsSelected, partial: form.category_ids.length > 0 && !allCatsSelected }"
+                @click="toggleAllCategories"
+              >
+                <svg v-if="allCatsSelected" viewBox="0 0 12 10" fill="none" width="11" height="9">
+                  <polyline points="1,5 4.5,8.5 11,1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span v-else-if="form.category_ids.length > 0" class="ms-partial-bar"></span>
+              </span>
+              <input v-model="catSearch" class="ms-search" placeholder="Buscar especialidad..." @click.stop />
+              <button class="ms-header-close" @click.stop="catOpen = false">×</button>
+            </div>
+            <div class="ms-options">
+              <div
+                v-for="cat in filteredCategories"
+                :key="cat.id"
+                class="ms-option"
+                :class="{ checked: form.category_ids.includes(cat.id) }"
+                @click.stop="toggleCategory(cat.id)"
+              >
+                <span class="ms-checkbox" :class="{ checked: form.category_ids.includes(cat.id) }">
+                  <svg v-if="form.category_ids.includes(cat.id)" viewBox="0 0 12 10" fill="none" width="11" height="9">
+                    <polyline points="1,5 4.5,8.5 11,1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <span class="ms-option-label">{{ cat.name }}</span>
+              </div>
+              <div v-if="filteredCategories.length === 0" class="ms-empty">Sin resultados</div>
+            </div>
+          </div>
+
+          <small v-if="errors['category_ids']" class="error">{{ errors['category_ids'][0] }}</small>
         </div>
 
-        <!-- Servicios (chips multi-selección) -->
+        <!-- Servicios acumulados de todas las especialidades seleccionadas -->
         <div class="form-group full">
           <label>Servicios que ofreces *</label>
 
-          <div v-if="!form.category_id" class="chips-hint">
-            Selecciona primero una especialidad
+          <div v-if="!form.category_ids.length" class="chips-hint">
+            Selecciona primero una o más especialidades
           </div>
 
-          <div v-else-if="services.length === 0" class="chips-hint">
-            No hay servicios disponibles para esta especialidad
+          <div v-else-if="availableServices.length === 0" class="chips-hint">
+            No hay servicios disponibles para las especialidades seleccionadas
           </div>
 
-          <div v-else class="service-chips">
-            <button
-              v-for="service in services"
-              :key="service.id"
-              type="button"
-              class="service-chip"
-              :class="{ selected: form.service_ids.includes(service.id) }"
-              @click="toggleService(service.id)"
+          <template v-else>
+            <div
+              v-for="cat in categoriesWithServices"
+              :key="cat.id"
+              class="service-group"
             >
-              <span v-if="form.service_ids.includes(service.id)" class="chip-check">✓</span>
-              {{ service.name }}
-            </button>
-          </div>
+              <div class="service-group-label">{{ cat.name }}</div>
+              <div class="service-chips">
+                <button
+                  v-for="service in cat.services"
+                  :key="service.id"
+                  type="button"
+                  class="service-chip"
+                  :class="{ selected: form.service_ids.includes(service.id) }"
+                  @click="toggleService(service.id)"
+                >
+                  <span v-if="form.service_ids.includes(service.id)" class="chip-check">✓</span>
+                  {{ service.name }}
+                </button>
+              </div>
+            </div>
+          </template>
 
           <small v-if="errors['service_ids'] || errors['service_ids.0']" class="error">
             {{ (errors['service_ids'] || errors['service_ids.0'])[0] }}
@@ -153,7 +203,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, onMounted, onUnmounted } from "vue"
 import categoryService from "@/services/categoryService"
 import api from "@/services/api"
 
@@ -195,7 +245,7 @@ const existingFiles = ref({
 })
 
 const form = ref({
-  category_id: "",
+  category_ids: [],
   service_ids: [],
   document_number: "",
   identity_card: null,
@@ -208,13 +258,91 @@ const form = ref({
   city_id: "",
 })
 
+/* Servicios disponibles (union de todas las categorías seleccionadas) */
+const availableServices = computed(() =>
+  allServices.value.filter(s => form.value.category_ids.includes(Number(s.category_id)))
+)
+
+/* Categorías seleccionadas con sus servicios (para mostrar agrupado) */
+const categoriesWithServices = computed(() =>
+  categories.value
+    .filter(c => form.value.category_ids.includes(c.id))
+    .map(c => ({
+      ...c,
+      services: allServices.value.filter(s => Number(s.category_id) === c.id),
+    }))
+    .filter(c => c.services.length > 0)
+)
+
+/* ── Dropdown multi-select de categorías ── */
+const catOpen        = ref(false)
+const catSearch      = ref('')
+const catDropdownRef = ref(null)
+
+const filteredCategories = computed(() =>
+  catSearch.value.trim()
+    ? categories.value.filter(c => c.name.toLowerCase().includes(catSearch.value.toLowerCase()))
+    : categories.value
+)
+
+const MAX_LABELS = 3
+const selectedCategoryLabel = computed(() => {
+  const names = form.value.category_ids
+    .map(id => categories.value.find(c => c.id === id)?.name)
+    .filter(Boolean)
+  if (names.length <= MAX_LABELS) return names.join(', ')
+  return names.slice(0, MAX_LABELS).join(', ') + ` (+${names.length - MAX_LABELS} más)`
+})
+
+const allCatsSelected = computed(() =>
+  categories.value.length > 0 && form.value.category_ids.length === categories.value.length
+)
+
+const toggleAllCategories = () => {
+  if (allCatsSelected.value) {
+    form.value.category_ids = []
+    form.value.service_ids = []
+  } else {
+    form.value.category_ids = categories.value.map(c => c.id)
+    const allSvcIds = allServices.value.map(s => s.id)
+    form.value.service_ids = [...new Set(allSvcIds)]
+  }
+}
+
+const onClickOutside = (e) => {
+  if (catDropdownRef.value && !catDropdownRef.value.contains(e.target)) {
+    catOpen.value = false
+    catSearch.value = ''
+  }
+}
+onMounted(() => document.addEventListener('click', onClickOutside))
+onUnmounted(() => document.removeEventListener('click', onClickOutside))
+
+const toggleCategory = (id) => {
+  const idx = form.value.category_ids.indexOf(id)
+  if (idx === -1) {
+    form.value.category_ids.push(id)
+    // Auto-seleccionar todos los servicios de la nueva categoría
+    const newServices = allServices.value
+      .filter(s => Number(s.category_id) === id)
+      .map(s => s.id)
+    newServices.forEach(sid => {
+      if (!form.value.service_ids.includes(sid)) form.value.service_ids.push(sid)
+    })
+  } else {
+    form.value.category_ids.splice(idx, 1)
+    // Quitar servicios de la categoría deseleccionada
+    const removedServices = allServices.value
+      .filter(s => Number(s.category_id) === id)
+      .map(s => s.id)
+    form.value.service_ids = form.value.service_ids.filter(sid => !removedServices.includes(sid))
+  }
+}
+
 const toggleService = (id) => {
   const idx = form.value.service_ids.indexOf(id)
-  if (idx === -1) {
-    form.value.service_ids.push(id)
-  } else {
-    form.value.service_ids.splice(idx, 1)
-  }
+  if (idx === -1) form.value.service_ids.push(id)
+  else form.value.service_ids.splice(idx, 1)
 }
 
 const handleFile = (event, field) => {
@@ -236,13 +364,8 @@ const loadServices = async () => {
   allServices.value = response.data
 }
 
-const filterServices = (autoSelect = false) => {
-  services.value = allServices.value.filter(
-    s => Number(s.category_id) === Number(form.value.category_id)
-  )
-  if (autoSelect) {
-    form.value.service_ids = services.value.map(s => s.id)
-  }
+const filterServices = () => {
+  // no-op: availableServices es computed reactivo
 }
 /* ===============================
    🔥 NUEVO: CARGAR PERFIL SI EXISTE
@@ -257,13 +380,14 @@ const loadProfile = async () => {
       professionalStatus.value  = professional.status
       professionalVerified.value = professional.is_verified
 
-      form.value.category_id = professional.category_id
+      form.value.category_ids   = professional.category_ids?.length
+        ? professional.category_ids.map(Number)
+        : (professional.category_id ? [Number(professional.category_id)] : [])
       form.value.document_number = professional.document_number
       form.value.phone = professional.phone
       form.value.bio = professional.bio
       form.value.address = professional.address
       form.value.city_id = professional.city_id
-      filterServices()
       if (professional.service_ids?.length) {
         form.value.service_ids = professional.service_ids
       } else if (professional.service_id) {
@@ -426,6 +550,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   width: 100%;
+  position: relative;
 }
 
 .full {
@@ -578,6 +703,27 @@ textarea {
   color: #94a3b8;
 }
 
+.category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.service-group {
+  margin-bottom: 14px;
+}
+
+.service-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+
 .service-chips {
   display: flex;
   flex-wrap: wrap;
@@ -632,5 +778,211 @@ textarea {
 
 .file-indicator a:hover {
   text-decoration: underline;
+}
+
+/* =========================
+   MULTI-SELECT ESPECIALIDADES
+========================= */
+
+/* Campo trigger */
+.ms-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 10px 0 14px;
+  border: 1.5px solid #ced4da;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  user-select: none;
+  gap: 8px;
+}
+
+.ms-field:hover {
+  border-color: #0ea5e9;
+}
+
+.ms-field.open {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+.ms-placeholder {
+  flex: 1;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.ms-label-text {
+  flex: 1;
+  font-size: 14px;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ms-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ms-clear {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.ms-clear:hover {
+  color: #64748b;
+}
+
+.ms-chevron {
+  font-size: 10px;
+  color: #6b7280;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.ms-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+/* Dropdown panel */
+.ms-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  z-index: 300;
+  overflow: hidden;
+}
+
+/* Fila superior: checkbox "todos" + search + cerrar */
+.ms-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  background: white;
+}
+
+.ms-search {
+  flex: 1;
+  padding: 6px 10px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  outline: none !important;
+  background: white !important;
+  box-shadow: none !important;
+  min-width: 0;
+}
+
+.ms-search:focus {
+  border-color: #0ea5e9 !important;
+  box-shadow: none !important;
+}
+
+.ms-header-close {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+.ms-header-close:hover {
+  color: #374151;
+}
+
+/* Lista de opciones */
+.ms-options {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.ms-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.ms-option:hover {
+  background: #f0f9ff;
+}
+
+.ms-option.checked {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.ms-option-label {
+  font-size: 14px;
+}
+
+/* Checkbox cuadrado estilo PrimeVue */
+.ms-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ced4da;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.15s, background 0.15s;
+  background: white;
+  cursor: pointer;
+}
+
+.ms-checkbox.checked {
+  border-color: #0ea5e9;
+  background: #0ea5e9;
+}
+
+.ms-checkbox.partial {
+  border-color: #0ea5e9;
+  background: #0ea5e9;
+}
+
+.ms-partial-bar {
+  width: 10px;
+  height: 2px;
+  background: white;
+  border-radius: 1px;
+  display: block;
+}
+
+.ms-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #9ca3af;
 }
 </style>
