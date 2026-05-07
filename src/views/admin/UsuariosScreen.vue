@@ -164,13 +164,18 @@
             </td>
 
             <td class="td-specialty hide-md">
-              <span class="specialty-badge">
-                {{
-                  user.role === 'professional'
-                    ? (user.professional?.category?.name || '—')
-                : 'No aplica'
-                }}
-              </span>
+              <template v-if="user.role === 'professional'">
+                <template v-if="user.professional?.categories?.length">
+                  <span
+                    v-for="cat in user.professional.categories"
+                    :key="cat.id"
+                    class="specialty-badge"
+                    style="margin-right:4px;margin-bottom:2px;display:inline-block"
+                  >{{ cat.name }}</span>
+                </template>
+                <span v-else class="specialty-badge">{{ user.professional?.category?.name || '—' }}</span>
+              </template>
+              <span v-else class="specialty-badge">No aplica</span>
             </td>
 
             <!-- Role -->
@@ -315,10 +320,24 @@
                 <span class="detail-label">Registrado</span>
                 <span class="detail-value">{{ formatDate(selectedUser.created_at) }}</span>
               </div>
-              <div class="detail-item">
+              <div v-if="selectedUser.role === 'professional'" class="detail-item">
                 <span class="detail-label">Verificado el</span>
-                <span class="detail-value">{{ selectedUser.professional?.verified_at ?
-                  formatDate(selectedUser.professional.verified_at) : '—' }}</span>
+                <span class="detail-value">{{ selectedUser.professional?.verified_at
+                  ? formatDate(selectedUser.professional.verified_at)
+                  : '—' }}</span>
+              </div>
+              <div v-if="selectedUser.role === 'professional' && (selectedUser.professional?.categories?.length || selectedUser.professional?.category)" class="detail-item full-span">
+                <span class="detail-label">Especialidades</span>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+                  <template v-if="selectedUser.professional?.categories?.length">
+                    <span
+                      v-for="cat in selectedUser.professional.categories"
+                      :key="cat.id"
+                      class="specialty-badge"
+                    >{{ cat.name }}</span>
+                  </template>
+                  <span v-else class="specialty-badge">{{ selectedUser.professional?.category?.name || '—' }}</span>
+                </div>
               </div>
             </div>
             <!-- Datos adicionales del profesional -->
@@ -791,10 +810,12 @@ const verifyProfessional = async (user) => {
       if (idx !== -1 && users.value[idx].professional) {
         users.value[idx].professional.status      = data.status
         users.value[idx].professional.is_verified = data.is_verified
+        users.value[idx].professional.verified_at = data.verified_at
       }
       if (selectedUser.value?.id === user.id && selectedUser.value.professional) {
         selectedUser.value.professional.status      = data.status
         selectedUser.value.professional.is_verified = data.is_verified
+        selectedUser.value.professional.verified_at = data.verified_at
       }
     }
   } catch (e) {
@@ -1909,6 +1930,10 @@ td {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.detail-item.full-span {
+  grid-column: 1 / -1;
 }
 
 .detail-label {
