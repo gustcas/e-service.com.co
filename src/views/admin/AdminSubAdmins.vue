@@ -442,6 +442,7 @@ const MODULE_META = {
   dashboard:     { label: 'Dashboard',         icon: '📊', desc: 'Ver estadísticas generales' },
   users:         { label: 'Usuarios',          icon: '👥', desc: 'Gestionar clientes y profesionales' },
   categories:    { label: 'Categorías',        icon: '🏷️', desc: 'Administrar categorías y servicios' },
+  payments:      { label: 'Pagos',             icon: '💳', desc: 'Gestionar cobros y dispersiones' },
   services:      { label: 'Servicios',         icon: '🔧', desc: 'Crear y editar servicios' },
   reports:       { label: 'Reportes',          icon: '📈', desc: 'Ver reportes operativos y financieros' },
   auditory:      { label: 'Auditoría',         icon: '🔍', desc: 'Historial de acciones del sistema' },

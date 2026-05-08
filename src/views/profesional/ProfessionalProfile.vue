@@ -194,12 +194,9 @@
         </button>
       </div>
 
-      <div v-if="message" class="success-message">
-        {{ message }}
-      </div>
+    </div><!-- /profile-card -->
 
-    </div>
-  </div>
+  </div><!-- /profile-page -->
 </template>
 
 <script setup>
@@ -456,9 +453,9 @@ const saveProfile = async () => {
 
 onMounted(async () => {
   await loadCategories()
-  await loadServices()   // 👈 debe terminar ANTES de loadProfile
+  await loadServices()
   await loadCities()
-  await loadProfile()    // 👈 aquí ya filterServices() funciona bien
+  await loadProfile()
 })
 </script>
 
@@ -985,4 +982,5 @@ textarea {
   font-size: 13px;
   color: #9ca3af;
 }
+
 </style>

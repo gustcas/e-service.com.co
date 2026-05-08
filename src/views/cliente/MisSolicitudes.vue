@@ -121,6 +121,15 @@
             <button class="btn-regen" @click.stop="generateCode(req)">🔄 Regenerar</button>
           </div>
 
+          <div v-else-if="req.status === 'payment_pending'" class="pay-pending-actions">
+            <button class="btn-pay-now" @click.stop="goToPay(req)">
+              💳 Completar pago
+            </button>
+            <button class="btn-cancel-sr" :disabled="cancelling === req.id" @click.stop="cancelRequest(req)">
+              {{ cancelling === req.id ? 'Cancelando…' : 'Cancelar' }}
+            </button>
+          </div>
+
           <button v-else-if="req.status === 'accepted'"
             class="btn-gen"
             :disabled="generating === req.id"
@@ -275,9 +284,16 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import ChatModal from '@/components/ChatModal.vue'
 import chatService from '@/services/chatService'
+
+const router = useRouter()
+
+const goToPay = (req) => {
+  router.push({ name: 'ClienteHome', query: { pay: req.id } })
+}
 
 const chatOpen     = ref(false)
 const chatRequest  = ref(null)
@@ -305,6 +321,9 @@ const tabs = [
 ]
 const activeTab = ref('accepted')
 
+// Incluir 'payment_pending' en el tab 'pending'
+const PENDING_STATUSES = ['pending', 'payment_pending']
+
 // ── Vista ─────────────────────────────────────────────────────
 const viewMode = ref('grid')   // 'grid' | 'list'
 
@@ -324,12 +343,17 @@ const perPage = computed(() => viewMode.value === 'grid' ? 6 : 10)
 const loading    = ref(true)
 const requests   = ref([])
 const generating = ref(null)
+const cancelling = ref(null)
 const expandedId = ref(null)
 const toast      = ref({ visible: false, message: '', type: '' })
 let toastTimer   = null
 
 // ── Computed ──────────────────────────────────────────────────
-const filtered = computed(() => requests.value.filter(r => r.status === activeTab.value))
+const filtered = computed(() => requests.value.filter(r =>
+  activeTab.value === 'pending'
+    ? PENDING_STATUSES.includes(r.status)
+    : r.status === activeTab.value
+))
 
 const sortedFiltered = computed(() => {
   const arr = [...filtered.value]
@@ -345,7 +369,9 @@ const paginated = computed(() => {
   return sortedFiltered.value.slice(start, start + perPage.value)
 })
 
-const countByTab = (key) => requests.value.filter(r => r.status === key).length
+const countByTab = (key) => requests.value.filter(r =>
+  key === 'pending' ? PENDING_STATUSES.includes(r.status) : r.status === key
+).length
 
 // ── Acciones de control ───────────────────────────────────────
 const setTab = (key) => { activeTab.value = key; page.value = 1; expandedId.value = null }
@@ -354,7 +380,13 @@ const setView = (mode) => { viewMode.value = mode; page.value = 1; expandedId.va
 const toggleExpand = (id) => { expandedId.value = expandedId.value === id ? null : id }
 
 // ── Helpers ───────────────────────────────────────────────────
-const statusLabel = (s) => ({ pending: 'Pendiente', accepted: 'En curso', completed: 'Completada', rejected: 'Rechazada' }[s] || s)
+const statusLabel = (s) => ({
+  payment_pending: '💳 Pago pendiente',
+  pending:         'Pendiente',
+  accepted:        'En curso',
+  completed:       'Completada',
+  rejected:        'Rechazada',
+}[s] || s)
 
 const formatDate = (d) => {
   if (!d) return ''
@@ -376,6 +408,20 @@ const loadRequests = async () => {
     showToast('Error al cargar solicitudes', 'error')
   } finally {
     loading.value = false
+  }
+}
+
+const cancelRequest = async (req) => {
+  if (!confirm('¿Cancelar esta solicitud? Esta acción no se puede deshacer.')) return
+  cancelling.value = req.id
+  try {
+    await api.delete(`/client/requests/${req.id}`)
+    requests.value = requests.value.filter(r => r.id !== req.id)
+    showToast('Solicitud cancelada correctamente.', 'success')
+  } catch {
+    showToast('No se pudo cancelar la solicitud.', 'error')
+  } finally {
+    cancelling.value = null
   }
 }
 
@@ -620,6 +666,30 @@ onUnmounted(() => clearInterval(unreadTimer))
   cursor: pointer; font-family: inherit; transition: background .15s;
 }
 .btn-regen:hover { background: #fef3c7; }
+
+/* ── PAY PENDING ACTIONS ─────────────────────────────────────── */
+.pay-pending-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.btn-pay-now {
+  width: 100%; padding: 12px;
+  background: linear-gradient(135deg, #15803d, #16a34a);
+  color: white; border: none; border-radius: 11px;
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: opacity .15s, transform .15s;
+}
+.btn-pay-now:hover { transform: translateY(-1px); opacity: 0.92; }
+.btn-cancel-sr {
+  width: 100%; padding: 9px;
+  background: none; border: 1.5px solid #fca5a5; border-radius: 11px;
+  color: #dc2626; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: background .15s, color .15s;
+}
+.btn-cancel-sr:hover:not(:disabled) { background: #fef2f2; }
+.btn-cancel-sr:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ── GEN BUTTON (shared) ────────────────────────────────────── */
 .btn-gen {
