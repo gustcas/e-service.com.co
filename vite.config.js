@@ -11,13 +11,12 @@ export default defineConfig({
     },
   },
   server: {
-    host: '127.0.0.1',
+    host: true,
     port: 5173,
-    open: true,
+    open: false,
+    allowedHosts: true,
     hmr: {
-      host: '127.0.0.1',
       port: 5173,
-      protocol: 'ws',
     },
   },
 });

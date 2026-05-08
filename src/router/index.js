@@ -78,6 +78,12 @@ const routes = [
         component: () => import('@/views/profesional/MisIngresos.vue'),
         meta: { requiresAuth: true, role: 'professional' },
       },
+      {
+        path: 'datos-pago',
+        name: 'DatosPago',
+        component: () => import('@/views/profesional/DatosPago.vue'),
+        meta: { requiresAuth: true, role: 'professional' },
+      },
     ],
   },
 
@@ -120,6 +126,17 @@ const routes = [
         name: 'AdminReports',
         component: () => import('@/views/admin/AdminReports.vue'),
         meta: { requiresAuth: true, role: 'admin', title: 'Reportes - IService' },
+      },
+      {
+        path: 'payments',
+        name: 'AdminPayments',
+        component: () => import('@/views/admin/AdminPayments.vue'),
+        meta: {
+          requiresAuth: true,
+          role: 'admin',
+          module: 'payments',
+          title: 'Pagos - IService',
+        },
       },
       {
         path: 'live-services',
