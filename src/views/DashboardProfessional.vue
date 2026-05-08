@@ -43,6 +43,11 @@
           <span class="nav-label">Mis Ingresos</span>
         </router-link>
 
+        <router-link :to="{ name: 'DatosPago' }" class="nav-item">
+          <span class="nav-icon">💳</span>
+          <span class="nav-label">Datos de Pago</span>
+        </router-link>
+
       </nav>
 
       <div class="sidebar-footer">

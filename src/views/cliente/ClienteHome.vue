@@ -396,6 +396,90 @@
       </div>
     </Transition>
 
+    <!-- ======================== -->
+    <!-- MODAL: PAGO WOMPI        -->
+    <!-- ======================== -->
+    <Transition name="modal-fade">
+      <div v-if="showPaymentModal" class="modal-overlay">
+        <div class="modal-payment">
+          <div class="payment-icon-wrap">
+            <span class="payment-icon">💳</span>
+          </div>
+          <h3 class="payment-title">¡Solicitud registrada!</h3>
+          <p class="payment-sub">Para activarla, completa el pago de forma segura con Wompi.</p>
+
+          <div class="payment-summary">
+            <div class="payment-row">
+              <span>Servicio</span>
+              <strong>{{ pendingPayment?.service_name }}</strong>
+            </div>
+            <div class="payment-row total">
+              <span>Total a pagar</span>
+              <strong class="payment-amount">{{ pendingPayment?.amount_formatted }}</strong>
+            </div>
+          </div>
+
+          <div class="payment-security">
+            <span class="security-badge">🔒 Pago seguro con Wompi</span>
+            <small>Bancolombia · Nequi · Tarjeta débito/crédito · PSE</small>
+          </div>
+
+          <button class="btn-pay" :disabled="redirectingPay" @click="goToWompiCheckout">
+            <span v-if="redirectingPay">Cargando...</span>
+            <span v-else>Pagar ahora →</span>
+          </button>
+          <button class="btn-pay-cancel" @click="showPaymentModal = false">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- ======================== -->
+    <!-- MODAL: RESULTADO PAGO    -->
+    <!-- ======================== -->
+    <Transition name="modal-fade">
+      <div v-if="showPaymentResultModal" class="modal-overlay">
+        <div class="modal-payment">
+          <!-- APROBADO -->
+          <template v-if="paymentResult === 'success'">
+            <div class="payment-icon-wrap success">
+              <span class="payment-icon">✅</span>
+            </div>
+            <h3 class="payment-title">¡Pago exitoso!</h3>
+            <p class="payment-sub">Tu solicitud está activa. Buscaremos el profesional ideal.</p>
+            <button class="btn-pay" @click="closePaymentResult">
+              Ver categorías
+            </button>
+          </template>
+
+          <!-- PENDIENTE -->
+          <template v-else-if="paymentResult === 'pending'">
+            <div class="payment-icon-wrap pending">
+              <span class="payment-icon">⏳</span>
+            </div>
+            <h3 class="payment-title">Pago en proceso</h3>
+            <p class="payment-sub">Wompi está procesando tu pago. Te notificaremos cuando se confirme.</p>
+            <button class="btn-pay" @click="closePaymentResult">
+              Entendido
+            </button>
+          </template>
+
+          <!-- FALLIDO -->
+          <template v-else>
+            <div class="payment-icon-wrap failed">
+              <span class="payment-icon">❌</span>
+            </div>
+            <h3 class="payment-title">Pago no completado</h3>
+            <p class="payment-sub">No pudimos procesar el pago. Intenta de nuevo o usa otro método.</p>
+            <button class="btn-pay" @click="closePaymentResult">
+              Volver
+            </button>
+          </template>
+        </div>
+      </div>
+    </Transition>
+
     <!-- TOAST -->
     <Transition name="toast">
       <div v-if="toast.visible" class="toast" :class="toast.type">
@@ -408,8 +492,12 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api'
 import categoryService from '@/services/categoryService'
+
+const route  = useRoute()
+const router = useRouter()
 
 /* ======================== */
 /* STATE                    */
@@ -926,7 +1014,7 @@ const sendRequest = async () => {
 
   try {
     sending.value = true
-    await api.post('/client/service-request', {
+    const { data } = await api.post('/client/service-request', {
       category_id: selectedCategory.value.id,
       service_id: selectedService.value.id,
       description: form.value.description,
@@ -948,10 +1036,15 @@ const sendRequest = async () => {
       budget: totalPrice.value,
     })
 
-    successPrice.value   = totalPrice.value
-    successService.value = selectedService.value?.name ?? ''
-    showRequestModal.value = false
-    showSuccessModal.value = true
+    // Guardar datos para el modal de pago
+    pendingPayment.value = {
+      service_request_id: data.service_request_id,
+      amount:             data.amount,
+      amount_formatted:   data.amount_formatted,
+      service_name:       selectedService.value?.name ?? '',
+    }
+    showRequestModal.value  = false
+    showPaymentModal.value  = true
     resetForm()
 
   } catch (e) {
@@ -963,6 +1056,118 @@ const sendRequest = async () => {
   }
 }
 
+/* ======================== */
+/* PAGO WOMPI               */
+/* ======================== */
+const showPaymentModal  = ref(false)
+const pendingPayment    = ref(null)
+const redirectingPay    = ref(false)
+const paymentResult     = ref(null)  // 'success' | 'pending' | 'failed' | null
+
+const loadWompiWidget = () => {
+  return new Promise((resolve) => {
+    if (window.WidgetCheckout) { resolve(); return }
+    const s = document.createElement('script')
+    s.src = 'https://checkout.wompi.co/widget.js'
+    s.onload = resolve
+    document.head.appendChild(s)
+  })
+}
+
+let _widgetTimeoutId = null
+let _paymentHandled  = false   // evita que el timeout actúe tras un pago exitoso
+
+const goToWompiCheckout = async () => {
+  if (!pendingPayment.value) return
+  try {
+    redirectingPay.value = true
+    const { data } = await api.post('/client/payment/init', {
+      service_request_id: pendingPayment.value.service_request_id,
+    })
+
+    await loadWompiWidget()
+
+    const checkout = new window.WidgetCheckout({
+      currency:       'COP',
+      amountInCents:  data.amount_in_cents,
+      reference:      data.reference,
+      publicKey:      data.public_key,
+      signature:      { integrity: data.integrity },
+    })
+
+    redirectingPay.value   = false
+    showPaymentModal.value = false
+    _paymentHandled        = false
+
+    // Timeout: si el iframe falla (403) y el widget nunca responde, restaurar modal de pago
+    _widgetTimeoutId = setTimeout(() => {
+      if (!_paymentHandled) {
+        showPaymentModal.value = true
+        showToast('El widget de pago no cargó. Intenta de nuevo.', 'error')
+      }
+    }, 12000)
+
+    checkout.open(async function (result) {
+      clearTimeout(_widgetTimeoutId)
+      _paymentHandled = true
+
+      const tx = result?.transaction ?? null
+      if (!tx) {
+        // Cerrado con la X sin pagar → volver al modal de pago
+        showPaymentModal.value = true
+        return
+      }
+      const status = tx.status ?? ''
+
+      // Confirmar con el backend enviando la transacción del widget directamente
+      // (evita depender del webhook en desarrollo)
+      if (status === 'APPROVED' && data.reference) {
+        try {
+          await api.post('/client/payment/confirm', {
+            reference:   data.reference,
+            transaction: tx,   // objeto completo del widget → el backend lo procesa directamente
+          })
+        } catch (_) { /* silent */ }
+      }
+
+      paymentResult.value = status === 'APPROVED' ? 'success'
+        : status === 'PENDING' ? 'pending' : 'failed'
+      showPaymentResultModal.value = true
+    })
+
+  } catch (e) {
+    console.error(e)
+    clearTimeout(_widgetTimeoutId)
+    _paymentHandled = true
+    showToast('Error al iniciar el pago. Intenta de nuevo.', 'error')
+    redirectingPay.value   = false
+    showPaymentModal.value = true
+  }
+}
+
+const checkPaymentReturn = () => {
+  // Sin redirectUrl no hay redirect de Wompi; limpia cualquier param residual
+  const params = new URLSearchParams(window.location.search)
+  if (params.has('payment') || params.has('id')) {
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+}
+
+const showPaymentResultModal = ref(false)
+
+const closePaymentResult = () => {
+  showPaymentResultModal.value = false
+  showPaymentModal.value       = false
+  pendingPayment.value         = null
+  paymentResult.value          = null
+  navLevel.value               = 0
+  // Si el pago fue iniciado desde "Mis Solicitudes", volver allá para refrescar la lista
+  if (_cameFromSolicitudes.value) {
+    _cameFromSolicitudes.value = false
+    router.push({ name: 'MisSolicitudes' })
+  }
+}
+
 watch(currentStepName, (name, prev) => {
   if (name === 'Ubicación') {
     initPickerMap()
@@ -971,10 +1176,35 @@ watch(currentStepName, (name, prev) => {
   }
 })
 
+const _cameFromSolicitudes = ref(false)
+
+const autoOpenPayment = async () => {
+  const srId = route.query.pay
+  if (!srId) return
+  _cameFromSolicitudes.value = true
+  window.history.replaceState({}, '', window.location.pathname)
+  try {
+    const { data } = await api.post('/client/payment/init', {
+      service_request_id: Number(srId),
+    })
+    pendingPayment.value = {
+      service_request_id: Number(srId),
+      amount:             data.amount_in_cents / 100,
+      amount_formatted:   '$' + Number(data.amount_in_cents / 100).toLocaleString('es-CO'),
+      service_name:       data.service_name || 'Servicio',
+    }
+    showPaymentModal.value = true
+  } catch (e) {
+    showToast('No se pudo retomar el pago. Intenta desde la solicitud.', 'error')
+  }
+}
+
 onMounted(() => {
   loadCategories()
   loadServices()
   loadCities()
+  checkPaymentReturn()
+  autoOpenPayment()
 })
 
 onUnmounted(() => {
@@ -2321,5 +2551,134 @@ onUnmounted(() => {
   font-weight: 700;
   color: #1d4ed8;
   text-align: center;
+}
+
+/* ======================== */
+/* MODAL PAGO WOMPI         */
+/* ======================== */
+.modal-payment {
+  background: white;
+  width: 90%;
+  max-width: 420px;
+  border-radius: 24px;
+  padding: 36px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.payment-icon-wrap {
+  width: 72px;
+  height: 72px;
+  background: #eff6ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.payment-icon-wrap.success { background: #dcfce7; }
+.payment-icon-wrap.pending { background: #fef9c3; }
+.payment-icon-wrap.failed  { background: #fee2e2; }
+.payment-icon { font-size: 32px; }
+
+.payment-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.payment-sub {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.payment-summary {
+  width: 100%;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #475569;
+}
+
+.payment-row.total {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.payment-amount {
+  font-size: 20px;
+  color: #2563eb;
+}
+
+.payment-security {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.security-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #166534;
+  background: #dcfce7;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.payment-security small {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.btn-pay {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.btn-pay:hover { opacity: 0.92; transform: translateY(-1px); }
+.btn-pay:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.btn-pay-cancel {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px;
+}
+.btn-pay-cancel:hover { color: #64748b; }
+
+.modal-overlay:has(.modal-payment) {
+  align-items: center;
 }
 </style>
