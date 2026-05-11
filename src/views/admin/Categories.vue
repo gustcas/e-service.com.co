@@ -64,7 +64,7 @@
         <div class="filters-bar">
             <div class="search-wrapper">
                 <span class="search-icon">🔍</span>
-                <input v-model="searchQuery" type="text" placeholder="Buscar categoría o servicio..."
+                <input v-model="searchQuery" type="text" placeholder="Buscar categoría o servicio…"
                     class="search-input" />
                 <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''">✕</button>
             </div>
@@ -216,7 +216,7 @@
                     <div class="modal-footer">
                         <button class="modal-btn secondary" @click="showCreateCategory = false">Cancelar</button>
                         <button class="modal-btn primary" @click="saveCategory" :disabled="saving">
-                            {{ saving ? 'Guardando...' : 'Crear categoría' }}
+                            {{ saving ? 'Guardando…' : 'Crear categoría' }}
                         </button>
                     </div>
                 </div>
@@ -274,7 +274,7 @@
                     <div class="modal-footer">
                         <button class="modal-btn secondary" @click="showServiceModal = false">Cancelar</button>
                         <button class="modal-btn primary" @click="saveService" :disabled="saving">
-                            {{ saving ? 'Guardando...' : (editingService ? 'Guardar cambios' : 'Crear servicio') }}
+                            {{ saving ? 'Guardando…' : (editingService ? 'Guardar cambios' : 'Crear servicio') }}
                         </button>
                     </div>
                 </div>
@@ -295,7 +295,7 @@
                     <div class="modal-footer">
                         <button class="modal-btn secondary" @click="showDeleteConfirm = false">Cancelar</button>
                         <button class="modal-btn danger" @click="confirmDelete" :disabled="saving">
-                            {{ saving ? 'Eliminando...' : 'Sí, eliminar' }}
+                            {{ saving ? 'Eliminando…' : 'Sí, eliminar' }}
                         </button>
                     </div>
                 </div>
@@ -317,17 +317,19 @@ const viewMode = ref('cards')
 const expandedIds = ref([])
 
 // ─── Stats ─────────────────────────────────────────────────
-const totalServices = computed(() => categories.value.reduce((sum, c) => sum + c.services.length, 0))
+const totalServices = computed(() =>
+    categories.value.reduce((sum, c) => sum + (c.services?.length ?? 0), 0)
+)
 
 const avgPrice = computed(() => {
-    const all = categories.value.flatMap(c => c.services.map(s => parseFloat(s.price) || 0))
+    const all = categories.value.flatMap(c => (c.services ?? []).map(s => parseFloat(s.price) || 0))
     if (!all.length) return 0
     return all.reduce((a, b) => a + b, 0) / all.length
 })
 
 const maxServicesCategory = computed(() => {
     if (!categories.value.length) return '—'
-    const top = [...categories.value].sort((a, b) => b.services.length - a.services.length)[0]
+    const top = [...categories.value].sort((a, b) => (b.services?.length ?? 0) - (a.services?.length ?? 0))[0]
     return top?.name?.split(' ')[0] ?? '—'
 })
 
@@ -338,7 +340,7 @@ const filteredCategories = computed(() => {
     return categories.value
         .map(cat => ({
             ...cat,
-            services: cat.services.filter(s => s.name.toLowerCase().includes(q))
+            services: (cat.services ?? []).filter(s => s.name.toLowerCase().includes(q))
         }))
         .filter(cat =>
             cat.name.toLowerCase().includes(q) || cat.services.length > 0
@@ -366,8 +368,11 @@ const fetchCategories = async () => {
     loading.value = true
     try {
         const { data } = await categoryService.getAll()
-        categories.value = data.categories
-        // auto-expand primera categoría
+        // Normalizar: garantizar que services siempre sea array
+        categories.value = (data.categories ?? []).map(c => ({
+            ...c,
+            services: Array.isArray(c.services) ? c.services : [],
+        }))
         if (categories.value.length > 0 && expandedIds.value.length === 0) {
             expandedIds.value = [categories.value[0].id]
         }
