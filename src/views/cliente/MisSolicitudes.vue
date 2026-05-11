@@ -149,6 +149,13 @@
               <span class="comp-lbl">Total pagado</span>
               <span class="comp-total">${{ Number(req.budget).toLocaleString('es-CO') }}</span>
             </div>
+            <button class="btn-evidencias" @click.stop="openEvidences(req)">🖼️ Ver evidencias</button>
+            <button class="btn-factura" @click.stop="openInvoice(req)">🧾 Ver comprobante</button>
+            <button v-if="isCapacitacion(req)" class="btn-acta" :disabled="downloadingActa === req.id" @click.stop="downloadActa(req)">
+              {{ downloadingActa === req.id ? 'Descargando…' : '📄 Descargar acta' }}
+            </button>
+            <button v-if="!req._rated" class="btn-calificar" @click.stop="openRating(req)">⭐ Calificar profesional</button>
+            <div v-else class="rating-done-badge">✅ Ya calificaste este servicio</div>
           </div>
         </div>
       </div>
@@ -247,6 +254,13 @@
                 <span class="comp-lbl">Total pagado</span>
                 <span class="comp-total">${{ Number(req.budget).toLocaleString('es-CO') }}</span>
               </div>
+              <button class="btn-evidencias" @click.stop="openEvidences(req)">🖼️ Ver evidencias</button>
+              <button class="btn-factura" @click.stop="openInvoice(req)">🧾 Ver comprobante</button>
+              <button v-if="isCapacitacion(req)" class="btn-acta" :disabled="downloadingActa === req.id" @click.stop="downloadActa(req)">
+                {{ downloadingActa === req.id ? 'Descargando…' : '📄 Descargar acta' }}
+              </button>
+              <button v-if="!req._rated" class="btn-calificar" @click.stop="openRating(req)">⭐ Calificar profesional</button>
+              <div v-else class="rating-done-badge">✅ Ya calificaste este servicio</div>
             </div>
           </div>
         </Transition>
@@ -279,6 +293,93 @@
       @read="onChatRead"
     />
 
+    <!-- MODAL FACTURA -->
+    <InvoiceModal
+      v-if="invoiceModal.request"
+      :open="invoiceModal.open"
+      :request="invoiceModal.request"
+      type="client"
+      :user-name="authStore.user ? authStore.user.name : ''"
+      @close="invoiceModal.open = false"
+    />
+
+    <!-- MODAL CALIFICACIÓN -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="ratingModal.open" class="modal-overlay-ev" @click.self="ratingModal.open = false">
+          <div class="modal-ev modal-rating">
+            <div class="modal-ev-header">
+              <h3 class="modal-ev-title">Calificar profesional</h3>
+              <button class="modal-ev-close" @click="ratingModal.open = false">✕</button>
+            </div>
+            <div class="rating-body">
+              <p class="rating-sub">¿Cómo fue tu experiencia con <strong>{{ ratingModal.professionalName }}</strong>?</p>
+
+              <!-- Estrellas -->
+              <div class="stars-row">
+                <button v-for="n in 5" :key="n"
+                  :class="['star-btn', { filled: n <= ratingModal.score }]"
+                  @click="ratingModal.score = n">★</button>
+              </div>
+              <p class="stars-label">{{ starLabel(ratingModal.score) }}</p>
+
+              <!-- Comentario -->
+              <textarea
+                v-model="ratingModal.comment"
+                class="rating-comment"
+                placeholder="Cuéntanos más (opcional)…"
+                maxlength="500"
+                rows="3"
+              ></textarea>
+              <span class="rating-chars">{{ ratingModal.comment.length }}/500</span>
+
+              <button
+                class="btn-submit-rating"
+                :disabled="ratingModal.score === 0 || ratingModal.submitting"
+                @click="submitRating">
+                {{ ratingModal.submitting ? 'Enviando…' : 'Enviar calificación' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- MODAL EVIDENCIAS -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="evidenceModal.open" class="modal-overlay-ev" @click.self="evidenceModal.open = false">
+          <div class="modal-ev">
+            <div class="modal-ev-header">
+              <h3 class="modal-ev-title">Evidencias del servicio <span class="ev-id">#{{ String(evidenceModal.requestId).padStart(4,'0') }}</span></h3>
+              <button class="modal-ev-close" @click="evidenceModal.open = false">✕</button>
+            </div>
+
+            <div v-if="evidenceModal.loading" class="ev-loading">Cargando evidencias…</div>
+
+            <div v-else-if="evidenceModal.items.length === 0" class="ev-empty">
+              <span>🔍</span>
+              <p>El profesional aún no ha subido evidencias.</p>
+            </div>
+
+            <div v-else class="ev-grid">
+              <div v-for="ev in evidenceModal.items" :key="ev.id" class="ev-item">
+                <a :href="ev.file_url" target="_blank" rel="noopener">
+                  <img v-if="ev.file_type === 'image'" :src="ev.file_url" class="ev-img" :alt="ev.note || 'Evidencia'" />
+                  <div v-else class="ev-doc-thumb">
+                    <span>{{ ev.file_type === 'pdf' ? '📄' : '🎬' }}</span>
+                    <span class="ev-doc-type">{{ ev.file_type.toUpperCase() }}</span>
+                  </div>
+                </a>
+                <p v-if="ev.note" class="ev-note">{{ ev.note }}</p>
+                <span class="ev-date">{{ ev.created_at }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
   </div>
 </template>
 
@@ -287,9 +388,12 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import ChatModal from '@/components/ChatModal.vue'
+import InvoiceModal from '@/components/InvoiceModal.vue'
 import chatService from '@/services/chatService'
+import { useAuthStore } from '@/stores/auth'
 
-const router = useRouter()
+const router   = useRouter()
+const authStore = useAuthStore()
 
 const goToPay = (req) => {
   router.push({ name: 'ClienteHome', query: { pay: req.id } })
@@ -403,7 +507,19 @@ const showToast = (message, type = '') => {
 const loadRequests = async () => {
   try {
     const res = await api.get('/client/requests')
-    requests.value = res.data
+    const list = res.data
+    // Marcar cuáles ya fueron calificadas (paralelo, ignorar errores individuales)
+    await Promise.all(
+      list.filter(r => r.status === 'completed').map(async (r) => {
+        try {
+          const { data } = await api.get(`/client/requests/${r.id}/my-rating`)
+          r._rated = data.rated
+        } catch {
+          r._rated = false
+        }
+      })
+    )
+    requests.value = list
   } catch {
     showToast('Error al cargar solicitudes', 'error')
   } finally {
@@ -439,6 +555,89 @@ const generateCode = async (req) => {
     showToast('Error al generar el código', 'error')
   } finally {
     generating.value = null
+  }
+}
+
+// ── Modal factura ─────────────────────────────────────────
+const invoiceModal = ref({ open: false, request: null })
+const openInvoice  = (req) => { invoiceModal.value = { open: true, request: req } }
+
+// ── Acta de capacitación ──────────────────────────────────
+const downloadingActa = ref(null)
+
+const isCapacitacion = (req) =>
+  /capacit/i.test(req.service_name || '')
+
+const downloadActa = async (req, doc = 1) => {
+  downloadingActa.value = req.id
+  try {
+    const res = await api.get(`/client/requests/${req.id}/document/${doc}`, { responseType: 'blob' })
+    const url  = URL.createObjectURL(new Blob([res.data], { type: res.data.type }))
+    const link = document.createElement('a')
+    link.href     = url
+    link.download = `Acta-Capacitacion-${String(req.id).padStart(4, '0')}.docx`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    showToast('No se pudo descargar el acta', 'error')
+  } finally {
+    downloadingActa.value = null
+  }
+}
+
+// ── Modal de calificación ─────────────────────────────────
+const ratingModal = ref({
+  open: false, submitting: false,
+  requestId: null, professionalName: '',
+  score: 0, comment: '',
+})
+
+const starLabel = (n) => ['', 'Muy malo', 'Regular', 'Bueno', 'Muy bueno', 'Excelente'][n] || ''
+
+const openRating = async (req) => {
+  ratingModal.value = {
+    open: true, submitting: false,
+    requestId: req.id,
+    professionalName: req.professional ? req.professional.name : 'el profesional',
+    score: 0, comment: '',
+  }
+}
+
+const submitRating = async () => {
+  if (ratingModal.value.score === 0) return
+  ratingModal.value.submitting = true
+  try {
+    await api.post(`/client/requests/${ratingModal.value.requestId}/rate`, {
+      score:   ratingModal.value.score,
+      comment: ratingModal.value.comment,
+    })
+    const found = requests.value.find(r => r.id === ratingModal.value.requestId)
+    if (found) found._rated = true
+    ratingModal.value.open = false
+    showToast('¡Calificación enviada! Gracias por tu opinión.', 'success')
+  } catch (e) {
+    const msg = e.response && e.response.data && e.response.data.message
+      ? e.response.data.message
+      : 'Error al enviar la calificación'
+    showToast(msg, 'error')
+  } finally {
+    ratingModal.value.submitting = false
+  }
+}
+
+// ── Modal de evidencias ───────────────────────────────────
+const evidenceModal = ref({ open: false, loading: false, requestId: null, items: [] })
+
+const openEvidences = async (req) => {
+  evidenceModal.value = { open: true, loading: true, requestId: req.id, items: [] }
+  try {
+    const { data } = await api.get(`/client/requests/${req.id}/evidences`)
+    evidenceModal.value.items = data
+  } catch {
+    showToast('Error al cargar las evidencias', 'error')
+    evidenceModal.value.open = false
+  } finally {
+    evidenceModal.value.loading = false
   }
 }
 
@@ -887,4 +1086,149 @@ onUnmounted(() => clearInterval(unreadTimer))
   .lh-date, .lr-date { display: none; }
   .hide-sm { display: none; }
 }
+
+/* ── Botón evidencias ────────────────────────────────────── */
+.btn-evidencias {
+  width: 100%; margin-top: 8px; padding: 9px;
+  background: none; border: 1.5px solid #c4b5fd;
+  border-radius: 10px; color: #7c3aed;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background .15s;
+}
+.btn-evidencias:hover { background: #f5f3ff; }
+
+/* ── Modal evidencias overlay ───────────────────────────── */
+.modal-overlay-ev {
+  position: fixed; inset: 0; background: rgba(15,23,42,.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9998; padding: 16px;
+}
+.modal-ev {
+  background: white; border-radius: 20px;
+  width: 100%; max-width: 640px;
+  max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,.18);
+}
+.modal-ev-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1.5px solid #f1f5f9;
+  position: sticky; top: 0; background: white; z-index: 1;
+}
+.modal-ev-title { font-size: 16px; font-weight: 800; color: #0f172a; margin: 0; }
+.ev-id { font-size: 13px; color: #94a3b8; margin-left: 6px; }
+.modal-ev-close {
+  width: 30px; height: 30px; border-radius: 8px; border: 1.5px solid #e2e8f0;
+  background: #f8fafc; cursor: pointer; font-size: 14px; color: #64748b;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-ev-close:hover { background: #f1f5f9; }
+.ev-loading, .ev-empty {
+  padding: 32px; text-align: center; color: #94a3b8; font-size: 13px;
+}
+.ev-empty span { font-size: 28px; display: block; margin-bottom: 8px; }
+.ev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; padding: 20px 24px;
+}
+.ev-item {
+  display: flex; flex-direction: column; gap: 6px;
+  border: 1.5px solid #f1f5f9; border-radius: 12px; overflow: hidden;
+}
+.ev-img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  display: block; transition: opacity .2s;
+}
+.ev-img:hover { opacity: .85; }
+.ev-doc-thumb {
+  width: 100%; aspect-ratio: 4/3;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: #f8fafc; gap: 6px; font-size: 28px;
+}
+.ev-doc-type { font-size: 10px; font-weight: 700; color: #94a3b8; letter-spacing: .5px; }
+.ev-note { font-size: 11px; color: #475569; padding: 0 10px; margin: 0; line-height: 1.4; }
+.ev-date { font-size: 10px; color: #94a3b8; padding: 0 10px 8px; }
+
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity .2s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+
+/* ── Botón calificar ─────────────────────────────────────── */
+.btn-factura {
+  width: 100%; margin-top: 6px; padding: 9px;
+  background: none; border: 1.5px solid #bfdbfe;
+  border-radius: 10px; color: #1d4ed8;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background .15s;
+}
+.btn-factura:hover { background: #eff6ff; }
+
+.btn-acta {
+  width: 100%; margin-top: 6px; padding: 9px;
+  background: none; border: 1.5px solid #bbf7d0;
+  border-radius: 10px; color: #166534;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background .15s;
+}
+.btn-acta:hover:not(:disabled) { background: #f0fdf4; }
+.btn-acta:disabled { opacity: .6; cursor: not-allowed; }
+
+.btn-calificar {
+  width: 100%; margin-top: 6px; padding: 9px;
+  background: none; border: 1.5px solid #fde68a;
+  border-radius: 10px; color: #92400e;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background .15s;
+}
+.btn-calificar:hover { background: #fefce8; }
+
+.rating-done-badge {
+  margin-top: 6px; padding: 7px; border-radius: 10px;
+  background: #f0fdf4; border: 1px solid #86efac;
+  color: #166534; font-size: 11px; font-weight: 700;
+  text-align: center;
+}
+
+/* ── Modal de calificación ──────────────────────────────── */
+.modal-rating { max-width: 420px; }
+
+.rating-body {
+  padding: 20px 24px 24px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.rating-sub { font-size: 14px; color: #475569; margin: 0; }
+
+.stars-row { display: flex; gap: 6px; }
+.star-btn {
+  font-size: 34px; background: none; border: none;
+  color: #e2e8f0; cursor: pointer; padding: 0;
+  transition: color .15s, transform .1s;
+  line-height: 1;
+}
+.star-btn.filled { color: #f59e0b; }
+.star-btn:hover  { transform: scale(1.15); }
+
+.stars-label {
+  font-size: 13px; font-weight: 700; color: #f59e0b;
+  min-height: 18px; margin: 0;
+}
+
+.rating-comment {
+  width: 100%; padding: 10px 12px; border-radius: 10px;
+  border: 1.5px solid #e2e8f0; font-size: 13px; font-family: inherit;
+  color: #0f172a; resize: none; outline: none; box-sizing: border-box;
+  transition: border-color .15s;
+}
+.rating-comment:focus { border-color: #f59e0b; }
+.rating-chars { font-size: 10px; color: #94a3b8; text-align: right; }
+
+.btn-submit-rating {
+  width: 100%; padding: 12px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: white; border: none; border-radius: 11px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: opacity .15s, transform .15s;
+}
+.btn-submit-rating:hover:not(:disabled) { transform: translateY(-1px); }
+.btn-submit-rating:disabled { opacity: .5; cursor: not-allowed; }
 </style>

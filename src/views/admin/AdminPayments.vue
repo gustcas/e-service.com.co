@@ -122,7 +122,10 @@
                 <td class="mono">{{ p.id }}</td>
                 <td class="mono small">{{ p.reference }}</td>
                 <td><strong>{{ p.client_name }}</strong></td>
-                <td>{{ p.service_name }}</td>
+                <td>
+                  {{ p.service_name }}
+                  <span v-if="p.service_request_id" class="sr-link">#{{ p.service_request_id }}</span>
+                </td>
                 <td class="amount">{{ p.amount_formatted }}</td>
                 <td><span class="badge" :class="p.status">{{ statusLabel(p.status) }}</span></td>
                 <td class="date">{{ p.paid_at ?? p.created_at }}</td>
@@ -478,6 +481,12 @@ td { padding: 14px 16px; border-top: 1px solid #f1f5f9; font-size: 14px; color: 
 td.mono  { font-family: monospace; font-size: 12px; }
 td.small { font-size: 11px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 td.amount { font-weight: 800; color: #0f172a; white-space: nowrap; }
+.sr-link {
+  display: inline-block; margin-left: 6px;
+  font-size: 10px; font-weight: 700; color: #2563eb;
+  background: #eff6ff; border: 1px solid #bfdbfe;
+  padding: 1px 6px; border-radius: 4px; font-family: monospace;
+}
 td.date   { font-size: 12px; color: #94a3b8; white-space: nowrap; }
 
 /* Badges */

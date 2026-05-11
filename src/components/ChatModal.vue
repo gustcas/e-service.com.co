@@ -26,7 +26,7 @@
         <!-- ── MESSAGES ── -->
         <div class="chat-body" ref="bodyRef">
           <div v-if="apiError" class="chat-api-error">⚠ {{ apiError }}</div>
-          <div v-if="loading" class="chat-loading">Cargando mensajes...</div>
+          <div v-if="loading" class="chat-loading">Cargando mensajes…</div>
           <div v-else-if="messages.length === 0" class="chat-empty">
             <div class="chat-empty-icon">💬</div>
             <p>No hay mensajes aún.<br>¡Empieza la conversación!</p>
@@ -55,7 +55,7 @@
           <input
             v-model="newMessage"
             class="chat-input"
-            placeholder="Escribe un mensaje..."
+            placeholder="Escribe un mensaje…"
             @keydown.enter.prevent="send"
             :disabled="sending"
           />

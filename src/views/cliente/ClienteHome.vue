@@ -339,6 +339,10 @@
                 <strong>{{ form.people_count }}</strong>
               </div>
               <div class="summary-divider"></div>
+              <div v-if="isCapacitacion && form.people_count > 1" class="summary-row price-breakdown">
+                <span>Cálculo</span>
+                <strong>${{ formatCOP(selectedService?.price) }} × {{ form.people_count }} personas</strong>
+              </div>
               <div class="summary-row total-row">
                 <span>Total a pagar</span>
                 <strong class="total-amount">${{ formatCOP(totalPrice) }}</strong>
@@ -364,7 +368,7 @@
             <button v-if="currentStep === visibleSteps.length - 1" class="btn-send" :disabled="budgetError || sending"
               @click="sendRequest">
               <span v-if="sending" class="spinner"></span>
-              {{ sending ? 'Enviando...' : '🚀 Enviar solicitud' }}
+              {{ sending ? 'Enviando…' : '🚀 Enviar solicitud' }}
             </button>
           </div>
 
@@ -425,7 +429,7 @@
           </div>
 
           <button class="btn-pay" :disabled="redirectingPay" @click="goToWompiCheckout">
-            <span v-if="redirectingPay">Cargando...</span>
+            <span v-if="redirectingPay">Cargando…</span>
             <span v-else>Pagar ahora →</span>
           </button>
           <button class="btn-pay-cancel" @click="showPaymentModal = false">
@@ -762,9 +766,10 @@ const isVirtual = computed(() =>
   selectedService.value?.name?.toLowerCase().includes('virtual') ?? false
 )
 
-const isCapacitacion = computed(() =>
-  selectedCategory.value?.name === 'Capacitación'
-)
+const isCapacitacion = computed(() => {
+  const name = selectedCategory.value?.name?.toLowerCase() ?? ''
+  return name.includes('capacit')
+})
 
 const showEmpresaStep = computed(() =>
   isVirtual.value || isCapacitacion.value
@@ -2128,6 +2133,12 @@ onUnmounted(() => {
   font-weight: 700;
   color: #0f172a;
   font-size: 14px;
+}
+
+.price-breakdown strong {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
 }
 
 .total-amount {

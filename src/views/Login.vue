@@ -129,7 +129,7 @@
           </div>
 
           <button type="submit" class="submit-btn" :disabled="isLoading">
-            <span>{{ isLoading ? 'Cargando...' : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta') }}</span>
+            <span>{{ isLoading ? 'Cargando…' : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta') }}</span>
             <span class="btn-arrow">{{ isLoading ? '⏳' : '→' }}</span>
           </button>
         </form>
