@@ -41,7 +41,7 @@
               </svg>
             </div>
             <p class="empty-title">Sin solicitudes por ahora</p>
-            <small>Actualizando cada 5 segundos...</small>
+            <small>Actualizando cada 5 segundos…</small>
           </div>
 
           <TransitionGroup name="card" tag="div" class="card-group">
@@ -105,7 +105,7 @@
                     Detalles
                   </button>
                   <button class="btn-accept" @click="acceptRequest(req)" :disabled="accepting === req.id">
-                    {{ accepting === req.id ? 'Aceptando...' : 'Aceptar →' }}
+                    {{ accepting === req.id ? 'Aceptando…' : 'Aceptar →' }}
                   </button>
                 </div>
 
@@ -429,7 +429,7 @@ const loadRequests = async () => {
         .bindPopup(`
               <div style="min-width:160px;padding:4px;font-family:inherit">
                 <strong style="font-size:13px">${req.service_name || 'Servicio'}</strong><br>
-                <span style="color:#64748b;font-size:12px">${req.description?.substring(0, 60)}...</span><br>
+                <span style="color:#64748b;font-size:12px">${req.description?.substring(0, 60)}…</span><br>
                 <strong style="color:#2563eb;font-size:14px">$${Number(req.budget).toLocaleString('es-CO')}</strong>
               </div>
             `)

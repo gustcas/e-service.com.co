@@ -49,7 +49,7 @@
           <div class="kpi-icon purple">💰</div>
           <div class="kpi-body">
             <div class="kpi-value">{{ formatCurrency(data.revenue?.completed ?? 0) }}</div>
-            <div class="kpi-label">Revenue completado</div>
+            <div class="kpi-label">Ingresos recaudados</div>
           </div>
         </div>
       </div>
@@ -127,7 +127,7 @@
                 <th>Categoría</th>
                 <th>Total</th>
                 <th>Completados</th>
-                <th>Revenue</th>
+                <th>Ingresos</th>
                 <th>Conversión</th>
               </tr>
             </thead>

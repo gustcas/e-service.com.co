@@ -4,7 +4,7 @@
     <!-- Loading -->
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
-      <p class="loading-text">Cargando tus ingresos...</p>
+      <p class="loading-text">Cargando tus ingresos…</p>
     </div>
 
     <!-- Error -->

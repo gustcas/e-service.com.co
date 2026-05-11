@@ -14,7 +14,7 @@
         </div>
         <div class="admin-badge-header">
           <span>⚙️</span>
-          <span>Admin Panel</span>
+          <span>Panel Admin</span>
         </div>
         <button class="sidebar-close-btn" @click="sidebarOpen = false">✕</button>
       </div>

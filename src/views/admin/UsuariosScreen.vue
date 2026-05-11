@@ -19,9 +19,9 @@
           <span :class="{ spinning: loading }">🔄</span>
           <span class="btn-text">Actualizar</span>
         </button>
-        <button class="btn-export" @click="exportCSV">
-          <span>📥</span>
-          <span class="btn-text">Exportar</span>
+        <button class="btn-export" @click="exportCSV" :disabled="exporting">
+          <span :class="{ spinning: exporting }">📥</span>
+          <span class="btn-text">{{ exporting ? 'Exportando…' : 'Exportar' }}</span>
         </button>
       </div>
     </div>
@@ -42,7 +42,7 @@
       <!-- Search -->
       <div class="search-wrapper">
         <span class="search-icon">🔍</span>
-        <input v-model="filters.search" @input="onSearchInput" type="text" placeholder="Buscar por nombre o email..."
+        <input v-model="filters.search" @input="onSearchInput" type="text" placeholder="Buscar por nombre o email…"
           class="search-input" />
         <button v-if="filters.search" class="search-clear" @click="filters.search = ''; fetchUsers()">✕</button>
       </div>
@@ -64,6 +64,14 @@
           <span :class="['status-dot-mini', s.value]"></span>
           <span>{{ s.label }}</span>
         </button>
+      </div>
+
+      <!-- Specialty filter -->
+      <div v-if="specialties.length > 0" class="filter-group">
+        <select v-model="filters.specialty" @change="setSpecialtyFilter" class="per-page-select">
+          <option value="">Todas las especialidades</option>
+          <option v-for="sp in specialties" :key="sp.id" :value="sp.id">{{ sp.name }}</option>
+        </select>
       </div>
 
       <!-- Per page -->
@@ -259,8 +267,8 @@
           @click="goToPage(pagination.currentPage - 1)">‹</button>
 
         <button v-for="page in visiblePages" :key="page"
-          :class="['page-btn', { active: page === pagination.currentPage, ellipsis: page === '...' }]"
-          :disabled="page === '...'" @click="page !== '...' && goToPage(page)">{{ page }}</button>
+          :class="['page-btn', { active: page === pagination.currentPage, ellipsis: page === '…' }]"
+          :disabled="page === '…'" @click="page !== '…' && goToPage(page)">{{ page }}</button>
 
         <button class="page-btn" :disabled="pagination.currentPage === pagination.lastPage"
           @click="goToPage(pagination.currentPage + 1)">›</button>
@@ -455,7 +463,7 @@
           <div class="modal-footer">
             <button class="modal-btn secondary" @click="showEdit = false">Cancelar</button>
             <button class="modal-btn primary" @click="saveEdit" :disabled="saving">
-              {{ saving ? 'Guardando...' : 'Guardar cambios' }}
+              {{ saving ? 'Guardando…' : 'Guardar cambios' }}
             </button>
           </div>
         </div>
@@ -475,7 +483,7 @@
           <div class="modal-footer">
             <button class="modal-btn secondary" @click="showDeleteConfirm = false">Cancelar</button>
             <button class="modal-btn danger" @click="deleteUser" :disabled="saving">
-              {{ saving ? 'Eliminando...' : 'Sí, eliminar' }}
+              {{ saving ? 'Eliminando…' : 'Sí, eliminar' }}
             </button>
           </div>
         </div>
@@ -531,10 +539,20 @@ const filters = ref({
   search: '',
   role: 'all',
   status: 'all',
+  specialty: '',
   perPage: 10,
   sort: 'created_at',
   dir: 'desc',
 });
+
+const specialties = ref([])
+
+const loadSpecialties = async () => {
+  try {
+    const { data } = await api.get('/admin/users/specialties')
+    if (data.success) specialties.value = data.specialties
+  } catch { /* silencioso */ }
+}
 
 // ─── Paginación ────────────────────────────────────────────
 const pagination = ref({ total: 0, currentPage: 1, lastPage: 1, perPage: 10 });
@@ -551,11 +569,11 @@ const visiblePages = computed(() => {
   if (lastPage <= 7) return Array.from({ length: lastPage }, (_, i) => i + 1);
   const pages = [];
   if (currentPage <= 4) {
-    pages.push(1, 2, 3, 4, 5, '...', lastPage);
+    pages.push(1, 2, 3, 4, 5, '…', lastPage);
   } else if (currentPage >= lastPage - 3) {
-    pages.push(1, '...', lastPage - 4, lastPage - 3, lastPage - 2, lastPage - 1, lastPage);
+    pages.push(1, '…', lastPage - 4, lastPage - 3, lastPage - 2, lastPage - 1, lastPage);
   } else {
-    pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', lastPage);
+    pages.push(1, '…', currentPage - 1, currentPage, currentPage + 1, '…', lastPage);
   }
   return pages;
 });
@@ -641,8 +659,9 @@ const onSearchInput = () => {
 
 const setRoleFilter = (val) => { filters.value.role = val; pagination.value.currentPage = 1; fetchUsers(); };
 const setStatusFilter = (val) => { filters.value.status = val; pagination.value.currentPage = 1; fetchUsers(); };
+const setSpecialtyFilter = () => { pagination.value.currentPage = 1; fetchUsers(); };
 const clearFilters = () => {
-  filters.value = { search: '', role: 'all', status: 'all', perPage: 10, sort: 'created_at', dir: 'desc' };
+  filters.value = { search: '', role: 'all', status: 'all', specialty: '', perPage: 10, sort: 'created_at', dir: 'desc' };
   pagination.value.currentPage = 1;
   fetchUsers();
 };
@@ -661,6 +680,7 @@ const fetchUsers = async () => {
       search: filters.value.search,
       role: filters.value.role,
       status: filters.value.status,
+      specialty: filters.value.specialty || undefined,
       sort: filters.value.sort,
       dir: filters.value.dir
     })
@@ -830,22 +850,43 @@ const verifyProfessional = async (user) => {
   }
 }
 
-const exportCSV = () => {
-  const headers = ['ID', 'Nombre', 'Email', 'Rol', 'Estado', 'Registrado'];
-  const rows = users.value.map(u => [
-    u.id, u.name, u.email, u.role,
-    u.email_verified_at ? 'Verificado' : 'Pendiente',
-    formatDate(u.created_at),
-  ]);
-  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `usuarios_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
+const exporting = ref(false)
+const exportCSV = async () => {
+  exporting.value = true
+  try {
+    const params = new URLSearchParams()
+    if (filters.value.search)    params.set('search', filters.value.search)
+    if (filters.value.role !== 'all')   params.set('role', filters.value.role)
+    if (filters.value.status !== 'all') params.set('status', filters.value.status)
+    if (filters.value.specialty) params.set('specialty', filters.value.specialty)
+
+    const { data } = await api.get(`/admin/users/export?${params.toString()}`)
+
+    if (!data.success || !data.users.length) {
+      alert('No hay usuarios para exportar con los filtros actuales.')
+      return
+    }
+
+    const headers = Object.keys(data.users[0])
+    const rows    = data.users.map(u => headers.map(h => `"${String(u[h] ?? '').replace(/"/g, '""')}"`))
+    const csv     = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob    = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const a       = document.createElement('a')
+    a.href        = URL.createObjectURL(blob)
+    a.download    = `usuarios_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } catch {
+    alert('Error al exportar. Intenta de nuevo.')
+  } finally {
+    exporting.value = false
+  }
 };
 
-onMounted(fetchUsers);
+onMounted(() => {
+  fetchUsers()
+  loadSpecialties()
+})
 </script>
 
 <style scoped>
