@@ -61,46 +61,56 @@
         <TransitionGroup v-else-if="viewMode === 'grid'" name="fade" tag="div" class="jobs-grid">
             <div v-for="job in paginated" :key="job.id" class="job-card" :class="job.status">
 
-                <span :class="['status-pill', job.status]">{{ statusLabel(job.status) }}</span>
-
-                <div class="job-head">
-                    <div class="svc-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                            <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
-                        </svg>
-                    </div>
-                    <span class="job-svc">{{ job.service_name }}</span>
+                <div class="card-top-row">
+                    <span class="job-id-badge">#{{ String(job.id).padStart(4, '0') }}</span>
+                    <span :class="['status-pill', job.status]">{{ statusLabel(job.status) }}</span>
                 </div>
 
-                <div class="job-budget">${{ Number(job.budget).toLocaleString('es-CO') }}</div>
-
-                <p class="job-desc">{{ job.description }}</p>
-
-                <div class="job-chips">
-                    <span class="chip">📅 {{ job.service_date }} {{ job.service_time }}</span>
-                    <span v-if="job.address" class="chip">📍 {{ job.address }}</span>
-                    <span v-else class="chip chip-virtual">💻 Virtual</span>
-                </div>
-
-                <div class="job-divider"></div>
-
-                <div class="job-footer">
-                    <div class="client-info">
-                        <div class="client-avatar">{{ getInitials(job.client_name) }}</div>
-                        <div>
-                            <span class="client-name">{{ job.client_name }}</span>
-                            <span v-if="job.client_phone" class="client-phone">{{ job.client_phone }}</span>
+                <!-- Dos columnas: contenido (izq) + Chat centrado (der) -->
+                <div class="card-body-cols">
+                    <div class="card-body-left">
+                        <div class="job-head">
+                            <div class="svc-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                    <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+                                </svg>
+                            </div>
+                            <span class="job-svc">{{ job.service_name }}</span>
+                        </div>
+                        <div class="job-budget">${{ Number(job.budget).toLocaleString('es-CO') }}</div>
+                        <p class="job-desc">{{ job.description }}</p>
+                        <div class="job-chips">
+                            <span class="chip">📅 {{ job.service_date }} {{ job.service_time }}</span>
+                            <span v-if="job.address" class="chip">📍 {{ job.address }}</span>
+                            <span v-else class="chip chip-virtual">💻 Virtual</span>
+                        </div>
+                        <div class="job-divider"></div>
+                        <div class="client-info">
+                            <div class="client-avatar">{{ getInitials(job.client_name) }}</div>
+                            <div>
+                                <span class="client-name">{{ job.client_name }}</span>
+                                <span v-if="job.client_phone" class="client-phone">{{ job.client_phone }}</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="job-actions">
+
+                    <!-- Chat flotante al centro-derecha -->
+                    <div class="card-body-right">
                         <button class="btn-chat" @click.stop="openChat(job)">
                             💬 Chat
                             <span v-if="unreadCounts[job.id]" class="chat-badge">{{ unreadCounts[job.id] }}</span>
                         </button>
-                        <button v-if="job.status === 'accepted'" class="btn-evidence" @click.stop="openEvidenceModal(job)">📷 Evidencias</button>
-                        <button v-if="job.status === 'accepted'" class="btn-complete" @click.stop="openCodeModal(job)">✓ Completar</button>
-                        <button v-if="job.status === 'completed'" class="btn-view-ev" @click.stop="openEvidenceModal(job)">🖼️ Ver evidencias</button>
                     </div>
+                </div>
+
+                <!-- Botones de acción al fondo (ancho completo) -->
+                <div class="card-actions">
+                    <button v-if="job.status === 'accepted'" class="btn-evidence" @click.stop="openEvidenceModal(job)">📷 Evidencias</button>
+                    <button v-if="job.status === 'accepted'" class="btn-complete" @click.stop="openCodeModal(job)">✓ Completar</button>
+                    <button v-if="job.status === 'completed'" class="btn-view-ev" @click.stop="openEvidenceModal(job)">🖼️ Ver evidencias</button>
+                    <button v-if="job.status === 'completed'" class="btn-factura-pro" @click.stop="openInvoice(job)">🧾 Comprobante</button>
+                    <button v-if="job.status === 'completed' && !job._rated" class="btn-rate-client" @click.stop="openRating(job)">⭐ Calificar cliente</button>
+                    <span v-if="job.status === 'completed' && job._rated" class="rated-badge">✅ Calificado</span>
                 </div>
             </div>
         </TransitionGroup>
@@ -127,7 +137,7 @@
                   </svg>
                 </div>
                 <div>
-                  <div class="lr-name">{{ job.service_name }}</div>
+                  <div class="lr-name">{{ job.service_name }} <span class="lr-id">#{{ String(job.id).padStart(4,'0') }}</span></div>
                   <div class="lr-mini-desc">{{ job.description }}</div>
                 </div>
               </div>
@@ -160,6 +170,9 @@
                   <button v-if="job.status === 'accepted'" class="btn-evidence" @click.stop="openEvidenceModal(job)">📷 Evidencias</button>
                   <button v-if="job.status === 'accepted'" class="btn-complete" @click.stop="openCodeModal(job)">✓ Completar</button>
                   <button v-if="job.status === 'completed'" class="btn-view-ev" @click.stop="openEvidenceModal(job)">🖼️ Ver evidencias</button>
+                  <button v-if="job.status === 'completed'" class="btn-factura-pro" @click.stop="openInvoice(job)">🧾 Comprobante</button>
+                  <button v-if="job.status === 'completed' && !job._rated" class="btn-rate-client" @click.stop="openRating(job)">⭐ Calificar cliente</button>
+                  <span v-if="job.status === 'completed' && job._rated" class="rated-badge">✅ Calificado</span>
                 </div>
               </div>
             </Transition>
@@ -222,7 +235,7 @@
                             placeholder="Nota opcional (ej: trabajo finalizado en cocina)" rows="2"></textarea>
 
                         <button class="btn-upload" :disabled="!uploadFile || uploading" @click="submitEvidence">
-                            {{ uploading ? 'Subiendo...' : '⬆️ Subir evidencia' }}
+                            {{ uploading ? 'Subiendo…' : '⬆️ Subir evidencia' }}
                         </button>
                     </div>
 
@@ -255,7 +268,7 @@
                     <div class="modal-code-actions">
                         <button class="btn-cancel-code" @click="codeModal = false">Cancelar</button>
                         <button class="btn-verify" :disabled="fullCode.length < 6 || verifying" @click="submitCode">
-                            {{ verifying ? 'Verificando...' : 'Verificar →' }}
+                            {{ verifying ? 'Verificando…' : 'Verificar →' }}
                         </button>
                     </div>
 
@@ -280,6 +293,54 @@
           @read="onChatRead"
         />
 
+        <!-- MODAL FACTURA -->
+        <InvoiceModal
+          v-if="invoiceModal.job"
+          :open="invoiceModal.open"
+          :request="invoiceModal.job"
+          type="professional"
+          :user-name="authStore.user ? authStore.user.name : ''"
+          @close="invoiceModal.open = false"
+        />
+
+        <!-- MODAL CALIFICACIÓN -->
+        <Teleport to="body">
+          <Transition name="modal">
+            <div v-if="ratingModal.open" class="modal-overlay modal-center" @click.self="ratingModal.open = false">
+              <div class="modal-rating">
+                <div class="modal-ev-header">
+                  <div>
+                    <h3>Calificar cliente</h3>
+                    <p>¿Cómo fue la experiencia con <strong>{{ ratingModal.clientName }}</strong>?</p>
+                  </div>
+                  <button class="btn-modal-close" @click="ratingModal.open = false">✕</button>
+                </div>
+                <div class="rating-body">
+                  <div class="stars-row">
+                    <button v-for="n in 5" :key="n"
+                      :class="['star-btn', { filled: n <= ratingModal.score }]"
+                      @click="ratingModal.score = n">★</button>
+                  </div>
+                  <p class="stars-label">{{ starLabel(ratingModal.score) }}</p>
+                  <textarea
+                    v-model="ratingModal.comment"
+                    class="rating-comment"
+                    placeholder="Comentario opcional…"
+                    maxlength="500"
+                    rows="3"
+                  ></textarea>
+                  <button
+                    class="btn-submit-rating"
+                    :disabled="ratingModal.score === 0 || ratingModal.submitting"
+                    @click="submitRating">
+                    {{ ratingModal.submitting ? 'Enviando…' : 'Enviar calificación' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Transition>
+        </Teleport>
+
     </div>
 </template>
 
@@ -287,8 +348,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/services/api'
 import ChatModal from '@/components/ChatModal.vue'
+import InvoiceModal from '@/components/InvoiceModal.vue'
 import chatService from '@/services/chatService'
+import { useAuthStore } from '@/stores/auth'
 
+const authStore   = useAuthStore()
 const chatOpen    = ref(false)
 const chatRequest = ref(null)
 const unreadCounts = ref({})
@@ -449,11 +513,66 @@ const showToast = (message, type = '') => {
     toastTimer = setTimeout(() => { toast.value.visible = false }, 3000)
 }
 
+/* ============ invoice ============ */
+const invoiceModal = ref({ open: false, job: null })
+const openInvoice  = (job) => { invoiceModal.value = { open: true, job } }
+
+/* ============ rating ============ */
+const ratingModal = ref({
+  open: false, submitting: false,
+  jobId: null, clientName: '',
+  score: 0, comment: '',
+})
+
+const starLabel = (n) => ['', 'Muy malo', 'Regular', 'Bueno', 'Muy bueno', 'Excelente'][n] || ''
+
+const openRating = (job) => {
+  ratingModal.value = {
+    open: true, submitting: false,
+    jobId: job.id,
+    clientName: job.client_name || 'el cliente',
+    score: 0, comment: '',
+  }
+}
+
+const submitRating = async () => {
+  if (ratingModal.value.score === 0) return
+  ratingModal.value.submitting = true
+  try {
+    await api.post(`/professional/requests/${ratingModal.value.jobId}/rate-client`, {
+      score:   ratingModal.value.score,
+      comment: ratingModal.value.comment,
+    })
+    const found = jobs.value.find(j => j.id === ratingModal.value.jobId)
+    if (found) found._rated = true
+    ratingModal.value.open = false
+    showToast('¡Calificación enviada!', 'success')
+  } catch (e) {
+    const msg = e.response && e.response.data && e.response.data.message
+      ? e.response.data.message
+      : 'Error al enviar la calificación'
+    showToast(msg, 'error')
+  } finally {
+    ratingModal.value.submitting = false
+  }
+}
+
 /* ============ load ============ */
 const loadJobs = async () => {
     try {
         const res = await api.get('/professional/requests/accepted')
-        jobs.value = res.data
+        const list = res.data
+        await Promise.all(
+          list.filter(j => j.status === 'completed').map(async (j) => {
+            try {
+              const { data } = await api.get(`/professional/requests/${j.id}/my-rating`)
+              j._rated = data.rated
+            } catch {
+              j._rated = false
+            }
+          })
+        )
+        jobs.value = list
     } catch {
         showToast('Error al cargar trabajos', 'error')
     } finally {
@@ -722,10 +841,21 @@ onUnmounted(() => clearInterval(unreadTimer))
     background: #f0fdf4;
 }
 
+.card-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.job-id-badge {
+    font-size: 11px;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+}
+
 .status-pill {
-    position: absolute;
-    top: 12px;
-    right: 12px;
     font-size: 10px;
     font-weight: 800;
     letter-spacing: 0.5px;
@@ -804,27 +934,41 @@ onUnmounted(() => clearInterval(unreadTimer))
     border-radius: 8px;
 }
 
-.job-divider {
-    height: 1px;
-    background: #f1f5f9;
-    margin-bottom: 14px;
+/* Layout dos columnas: contenido izq + chat der centrado */
+.card-body-cols {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+.card-body-left {
+    flex: 1;
+    min-width: 0;
+}
+.card-body-right {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
 }
 
-/* ======================= */
-/* JOB FOOTER              */
-/* ======================= */
-.job-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+.job-divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 12px 0;
 }
 
 .client-info {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-bottom: 4px;
+}
+
+/* Botones de acción al pie de la tarjeta */
+.card-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
 }
 
 .client-avatar {
@@ -853,11 +997,6 @@ onUnmounted(() => clearInterval(unreadTimer))
     color: #64748b;
 }
 
-.job-actions {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
 
 .btn-chat {
     position: relative;
@@ -932,7 +1071,9 @@ onUnmounted(() => clearInterval(unreadTimer))
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
+    transition: background .15s, transform .15s;
 }
+.btn-view-ev:hover { background: #dcfce7; transform: translateY(-1px); }
 
 /* ======================= */
 /* MODAL EVIDENCIAS        */
@@ -1555,6 +1696,13 @@ onUnmounted(() => clearInterval(unreadTimer))
 .lr-icon.accepted  { background: #eff6ff; color: #2563eb; }
 .lr-icon.completed { background: #dcfce7; color: #15803d; }
 
+.lr-id {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-left: 5px;
+}
+
 .lr-name {
   font-size: 12px;
   font-weight: 700;
@@ -1785,4 +1933,147 @@ onUnmounted(() => clearInterval(unreadTimer))
     grid-template-columns: 2fr 1fr 0.7fr 28px;
   }
 }
+
+/* ── Comprobante ─────────────────────────────────────────── */
+.btn-factura-pro {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn-factura-pro:hover { background: #dbeafe; }
+
+/* ── Calificar cliente ───────────────────────────────────── */
+.btn-rate-client {
+  background: #fefce8;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn-rate-client:hover { background: #fef9c3; }
+
+.rated-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  padding: 5px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* ── Overlay centrado (para rating) ─────────────────────── */
+.modal-center {
+  align-items: center !important;
+}
+
+/* Header dentro del modal de calificación */
+.modal-rating .modal-ev-header {
+  padding: 22px 24px 16px;
+  border-bottom: 1.5px solid #f1f5f9;
+  margin-bottom: 0;
+}
+.modal-rating .modal-ev-header h3 { font-size: 18px; }
+.modal-rating .modal-ev-header p  { font-size: 13px; }
+
+/* ── Modal calificación ─────────────────────────────────── */
+.modal-rating {
+  background: white;
+  width: 90%;
+  max-width: 460px;
+  border-radius: 24px;
+  padding: 0;
+  box-shadow: 0 24px 60px rgba(0,0,0,.2);
+  animation: scaleIn 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.88); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.rating-body {
+  padding: 20px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.stars-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.star-btn {
+  font-size: 44px;
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  cursor: pointer;
+  padding: 0;
+  transition: color .15s, transform .12s;
+  line-height: 1;
+}
+.star-btn.filled { color: #f59e0b; }
+.star-btn:hover  { transform: scale(1.2); color: #fbbf24; }
+
+.stars-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f59e0b;
+  min-height: 20px;
+  margin: 0;
+  text-align: center;
+}
+
+.rating-comment {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .15s;
+}
+.rating-comment:focus { border-color: #f59e0b; }
+
+.btn-submit-rating {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.2px;
+  transition: opacity .15s, transform .15s;
+}
+.btn-submit-rating:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+.btn-submit-rating:disabled { opacity: .45; cursor: not-allowed; }
+.btn-submit-rating:hover:not(:disabled) { transform: translateY(-1px); }
+.btn-submit-rating:disabled { opacity: .5; cursor: not-allowed; }
 </style>

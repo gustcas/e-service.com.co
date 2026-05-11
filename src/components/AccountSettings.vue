@@ -29,7 +29,7 @@
             </div>
             <p v-if="nameMsg.text" :class="['msg', nameMsg.type]">{{ nameMsg.text }}</p>
             <button class="btn-save" :disabled="nameSaving || !nameForm.name.trim()" @click="saveName">
-              {{ nameSaving ? 'Guardando...' : 'Guardar nombre' }}
+              {{ nameSaving ? 'Guardando…' : 'Guardar nombre' }}
             </button>
           </div>
 
@@ -48,7 +48,7 @@
             </div>
             <p v-if="emailMsg.text" :class="['msg', emailMsg.type]">{{ emailMsg.text }}</p>
             <button class="btn-save" :disabled="emailSaving || !emailForm.email.trim() || !emailForm.current_password" @click="saveEmail">
-              {{ emailSaving ? 'Guardando...' : 'Cambiar correo' }}
+              {{ emailSaving ? 'Guardando…' : 'Cambiar correo' }}
             </button>
           </div>
 
@@ -73,7 +73,7 @@
             <button class="btn-save"
               :disabled="passSaving || !passForm.current_password || !passForm.new_password || passForm.new_password !== passForm.new_password_confirmation"
               @click="savePassword">
-              {{ passSaving ? 'Guardando...' : 'Cambiar contraseña' }}
+              {{ passSaving ? 'Guardando…' : 'Cambiar contraseña' }}
             </button>
           </div>
 

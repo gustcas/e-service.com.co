@@ -52,7 +52,7 @@
     <div class="filters-bar">
       <div class="search-wrapper">
         <span class="search-icon">🔍</span>
-        <input v-model="search" type="text" placeholder="Buscar por cliente, profesional o ID..."
+        <input v-model="search" type="text" placeholder="Buscar por cliente, profesional o ID…"
           class="search-input" @input="onSearch" />
         <button v-if="search" class="search-clear" @click="search = ''">✕</button>
       </div>
@@ -422,10 +422,50 @@
                 <div class="detail-row"><span>Tiempo</span><strong>{{ detailModal.req.elapsed }}</strong></div>
               </div>
 
+              <!-- REASIGNACIÓN -->
+              <div v-if="['pending','accepted'].includes(detailModal.req.status)" class="detail-section">
+                <div class="detail-section-title">↺ Reasignar servicio</div>
+
+                <div v-if="detailModal.loadingProfs" style="color:#94a3b8;font-size:13px;padding:8px 0">Cargando profesionales…</div>
+                <template v-else>
+                  <!-- Selector profesional -->
+                  <div class="reassign-field">
+                    <label class="reassign-label">Profesional</label>
+                    <select v-model="detailModal.reassign.professionalId" class="reassign-select">
+                      <option :value="null">— Sin cambio —</option>
+                      <option v-for="p in detailModal.profs" :key="p.id" :value="p.id">
+                        {{ p.name }}{{ p.is_online ? ' 🟢' : ' ⚫' }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <!-- Fecha -->
+                  <div class="reassign-field">
+                    <label class="reassign-label">Nueva fecha</label>
+                    <input type="date" v-model="detailModal.reassign.serviceDate" class="reassign-input" />
+                  </div>
+
+                  <!-- Hora -->
+                  <div class="reassign-field">
+                    <label class="reassign-label">Nueva hora</label>
+                    <input type="time" v-model="detailModal.reassign.serviceTime" class="reassign-input" />
+                  </div>
+
+                  <div v-if="detailModal.reassign.error" class="error-banner" style="margin-top:4px">{{ detailModal.reassign.error }}</div>
+
+                  <button class="btn-reassign-confirm"
+                    :disabled="detailModal.reassign.saving || (!detailModal.reassign.professionalId && !detailModal.reassign.serviceDate && !detailModal.reassign.serviceTime)"
+                    @click="applyDetailReassign"
+                    style="width:100%;margin-top:6px">
+                    {{ detailModal.reassign.saving ? 'Guardando…' : '✓ Aplicar cambios' }}
+                  </button>
+                </template>
+              </div>
+
               <!-- EVIDENCIAS -->
               <div class="detail-section">
                 <div class="detail-section-title">📎 Evidencias del servicio</div>
-                <div v-if="detailModal.loadingEvidences" style="padding:12px 0;color:#94a3b8;font-size:13px">Cargando evidencias...</div>
+                <div v-if="detailModal.loadingEvidences" style="padding:12px 0;color:#94a3b8;font-size:13px">Cargando evidencias…</div>
                 <div v-else-if="!detailModal.evidences.length" style="padding:12px 0;color:#94a3b8;font-size:13px">Sin evidencias registradas.</div>
                 <div v-else class="evidence-grid">
                   <a
@@ -467,10 +507,10 @@
               <button class="chat-close-btn" @click="reassignModal.open = false">✕</button>
             </div>
             <div class="detail-body">
-              <p style="font-size:13px;color:#64748b;margin:0 0 12px">Selecciona un profesional disponible (en línea, con capacidad para este servicio):</p>
-              <div v-if="reassignModal.loading" style="text-align:center;padding:24px;color:#94a3b8">Buscando profesionales...</div>
+              <p style="font-size:13px;color:#64748b;margin:0 0 12px">Selecciona un profesional disponible para este servicio (🟢 = en línea ahora):</p>
+              <div v-if="reassignModal.loading" style="text-align:center;padding:24px;color:#94a3b8">Buscando profesionales…</div>
               <div v-else-if="reassignModal.professionals.length === 0" style="text-align:center;padding:24px;color:#94a3b8">
-                No hay profesionales disponibles en línea para este servicio.
+                No hay profesionales verificados para este servicio.
               </div>
               <div v-else class="reassign-list">
                 <div v-for="p in reassignModal.professionals" :key="p.id"
@@ -487,7 +527,7 @@
                 <button class="btn-reassign-confirm"
                   :disabled="!reassignModal.selectedId || reassignModal.saving"
                   @click="confirmReassign">
-                  {{ reassignModal.saving ? 'Asignando...' : '✓ Confirmar asignación' }}
+                  {{ reassignModal.saving ? 'Asignando…' : '✓ Confirmar asignación' }}
                 </button>
               </div>
             </div>
@@ -530,7 +570,7 @@
 
             <!-- Body -->
             <div class="chat-body-admin" ref="chatBodyRef">
-              <div v-if="chatViewer.loading" class="chat-loading">Cargando mensajes...</div>
+              <div v-if="chatViewer.loading" class="chat-loading">Cargando mensajes…</div>
               <div v-else-if="chatViewer.messages.length === 0" class="chat-empty">
                 <p>Sin mensajes en esta conversación</p>
               </div>
@@ -734,22 +774,67 @@ const refreshAll = async () => {
 const truncate = (str, len) => str && str.length > len ? str.slice(0, len) + '…' : str
 
 // ── Detail Modal ─────────────────────────────────────────────
-const detailModal = ref({ open: false, req: {}, evidences: [], loadingEvidences: false })
+const detailModal = ref({
+  open: false, req: {}, evidences: [], loadingEvidences: false,
+  profs: [], loadingProfs: false,
+  reassign: { professionalId: null, serviceDate: '', serviceTime: '', saving: false, error: '' },
+})
 
 const openDetail = async (req) => {
-  detailModal.value = { open: true, req, evidences: [], loadingEvidences: true }
+  detailModal.value = {
+    open: true, req, evidences: [], loadingEvidences: true,
+    profs: [], loadingProfs: false,
+    reassign: { professionalId: null, serviceDate: '', serviceTime: '', saving: false, error: '' },
+  }
+
+  // Cargar profesionales si el servicio es reasignable
+  if (['pending', 'accepted'].includes(req.status)) {
+    detailModal.value.loadingProfs = true
+    try {
+      const { data } = await api.get(`/admin/live-services/requests/${req.id}/available-professionals`)
+      detailModal.value.profs = data.professionals || []
+    } catch {
+      detailModal.value.profs = []
+    } finally {
+      detailModal.value.loadingProfs = false
+    }
+  }
+
   try {
     const { data } = await api.get(`/admin/live-services/requests/${req.id}/evidences`)
     detailModal.value.evidences = (Array.isArray(data) ? data : []).map(ev => ({
       url       : ev.file_url,
-      file_name : ev.file_url?.split('/').pop() ?? 'archivo',
+      file_name : ev.file_url ? ev.file_url.split('/').pop() : 'archivo',
       is_image  : ev.file_type === 'image',
-      description: ev.note ?? '',
+      description: ev.note || '',
     }))
   } catch {
     detailModal.value.evidences = []
   } finally {
     detailModal.value.loadingEvidences = false
+  }
+}
+
+const applyDetailReassign = async () => {
+  const r = detailModal.value.reassign
+  if (!r.professionalId && !r.serviceDate && !r.serviceTime) return
+  r.saving = true
+  r.error  = ''
+  try {
+    const payload = {}
+    if (r.professionalId) payload.professional_id = r.professionalId
+    if (r.serviceDate)    payload.service_date    = r.serviceDate
+    if (r.serviceTime)    payload.service_time    = r.serviceTime
+    await api.post(`/admin/live-services/requests/${detailModal.value.req.id}/reassign`, payload)
+    // Actualizar datos visuales en la fila
+    if (r.serviceDate) detailModal.value.req.service_date = r.serviceDate
+    if (r.serviceTime) detailModal.value.req.service_time = r.serviceTime
+    detailModal.value.open = false
+    await refreshAll()
+  } catch (e) {
+    r.error = (e.response && e.response.data && e.response.data.message) || 'Error al reasignar.'
+  } finally {
+    r.saving = false
   }
 }
 
@@ -1320,6 +1405,25 @@ onUnmounted(() => clearInterval(pollTimer))
 .chat-body-admin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 .modal-enter-active, .modal-leave-active  { transition: opacity .2s, transform .2s; }
 .modal-enter-from, .modal-leave-to        { opacity: 0; transform: scale(.96); }
+
+/* ── Reassign inline fields ──────────────────────────────────── */
+.reassign-field {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0; border-bottom: 1px solid #f1f5f9;
+}
+.reassign-field:last-of-type { border-bottom: none; }
+.reassign-label {
+  font-size: 11px; font-weight: 700; color: #64748b; min-width: 120px; flex-shrink: 0;
+}
+.reassign-select,
+.reassign-input {
+  flex: 1; padding: 7px 10px; border: 1.5px solid #e2e8f0;
+  border-radius: 8px; font-size: 13px; font-family: inherit;
+  color: #0f172a; background: white; outline: none;
+  transition: border-color .15s;
+}
+.reassign-select:focus,
+.reassign-input:focus { border-color: #2563eb; }
 
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 1100px) {
