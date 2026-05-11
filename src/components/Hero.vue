@@ -83,7 +83,7 @@
             <!-- Search -->
             <div class="app-search">
               <span class="s-icon">🔍</span>
-              <input type="text" placeholder="Buscar servicios..." readonly />
+              <input type="text" placeholder="Buscar servicios…" readonly />
               <div class="s-btn">🔍</div>
             </div>
 

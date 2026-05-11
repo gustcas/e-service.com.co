@@ -28,7 +28,7 @@
 
           <!-- Trigger / Campo visible -->
           <div class="ms-field" :class="{ open: catOpen }" @click="catOpen = !catOpen">
-            <span v-if="!form.category_ids.length" class="ms-placeholder">Selecciona especialidades...</span>
+            <span v-if="!form.category_ids.length" class="ms-placeholder">Selecciona especialidades…</span>
             <span v-else class="ms-label-text">{{ selectedCategoryLabel }}</span>
             <div class="ms-icons">
               <button v-if="form.category_ids.length" type="button" class="ms-clear" @click.stop="form.category_ids = []; form.service_ids = []" title="Limpiar">×</button>
@@ -50,7 +50,7 @@
                 </svg>
                 <span v-else-if="form.category_ids.length > 0" class="ms-partial-bar"></span>
               </span>
-              <input v-model="catSearch" class="ms-search" placeholder="Buscar especialidad..." @click.stop />
+              <input v-model="catSearch" class="ms-search" placeholder="Buscar especialidad…" @click.stop />
               <button class="ms-header-close" @click.stop="catOpen = false">×</button>
             </div>
             <div class="ms-options">
@@ -190,7 +190,7 @@
 
       <div class="form-actions">
         <button class="save-btn" @click="saveProfile" :disabled="saving">
-          {{ saving ? "Enviando..." : "Enviar para verificación" }}
+          {{ saving ? "Enviando…" : "Enviar para verificación" }}
         </button>
       </div>
 

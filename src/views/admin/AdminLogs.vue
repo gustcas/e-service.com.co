@@ -7,7 +7,7 @@
         <div class="header-icon">📋</div>
         <div>
           <h2 class="section-title">Auditoría</h2>
-          <p class="section-subtitle">Registro de acciones del panel de administración</p>
+          <p class="section-subtitle">Registro de acciones de administradores, clientes y profesionales</p>
         </div>
       </div>
       <button class="btn-refresh" @click="fetchLogs(1)" :disabled="loading">
@@ -21,7 +21,7 @@
     <div class="filters-bar">
       <div class="search-box">
         <span>🔍</span>
-        <input v-model="search" type="text" placeholder="Buscar por admin o descripción…" class="search-input" @input="debouncedFetch" />
+        <input v-model="search" type="text" placeholder="Buscar por usuario o descripción…" class="search-input" @input="debouncedFetch" />
       </div>
       <select v-model="filterEntity" class="filter-select" @change="fetchLogs(1)">
         <option value="">Todas las entidades</option>
@@ -29,6 +29,7 @@
         <option value="sub-admin">Sub-admins</option>
         <option value="category">Categorías</option>
         <option value="service">Servicios</option>
+        <option value="service_request">Solicitudes</option>
       </select>
       <select v-model="filterAction" class="filter-select" @change="fetchLogs(1)">
         <option value="">Todas las acciones</option>
@@ -37,6 +38,11 @@
         <option value="delete">Eliminar</option>
         <option value="verify">Verificar</option>
         <option value="toggle">Cambiar estado</option>
+        <option value="cancel">Cancelar</option>
+        <option value="complete">Completar</option>
+        <option value="upload_evidence">Evidencias</option>
+        <option value="rate">Calificar</option>
+        <option value="reassign">Reasignar</option>
       </select>
     </div>
 
@@ -171,8 +177,17 @@ const fetchLogs = async (page = 1) => {
 
 const actionCount = (action) => logs.value.filter(l => l.action === action).length;
 
-const ACTION_LABELS  = { create: 'Crear', update: 'Editar', delete: 'Eliminar', verify: 'Verificar', toggle: 'Estado' };
-const ENTITY_LABELS  = { user: 'Usuario', 'sub-admin': 'Sub-admin', category: 'Categoría', service: 'Servicio' };
+const ACTION_LABELS  = {
+  create: 'Crear', update: 'Editar', delete: 'Eliminar',
+  verify: 'Verificar', toggle: 'Estado', cancel: 'Cancelar',
+  complete: 'Completar', upload_evidence: 'Evidencia', rate: 'Calificación',
+  reassign: 'Reasignar',
+};
+const ENTITY_LABELS  = {
+  user: 'Usuario', 'sub-admin': 'Sub-admin',
+  category: 'Categoría', service: 'Servicio',
+  service_request: 'Solicitud',
+};
 
 const actionLabel = (a) => ACTION_LABELS[a] ?? a;
 const entityLabel = (e) => ENTITY_LABELS[e] ?? e;
