@@ -16,7 +16,7 @@
     </div>
 
     <!-- Quick stats -->
-    <div class="grid grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
       <div class="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-3">
         <span class="text-2xl flex-shrink-0">📝</span>
         <div>
@@ -94,9 +94,37 @@
       <p class="text-sm">Las acciones del panel de administración aparecerán aquí.</p>
     </div>
 
-    <!-- Tabla -->
+    <!-- Tabla / Cards -->
     <div v-else class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-      <table class="w-full border-collapse text-[13px]">
+
+      <!-- Mobile cards (< md) -->
+      <div class="md:hidden divide-y divide-slate-50">
+        <div v-for="log in logs" :key="log.id" class="p-4 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${log.admin_name}`"
+                class="w-8 h-8 rounded-lg border border-slate-100 flex-shrink-0" />
+              <div>
+                <p class="font-semibold text-[#0f172a] text-[13px]">{{ log.admin_name }}</p>
+                <p class="text-[10px] text-slate-400">{{ formatDate(log.created_at) }}</p>
+              </div>
+            </div>
+            <span :class="['inline-block px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide flex-shrink-0', actionBadgeClass(log.action)]">
+              {{ actionLabel(log.action) }}
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="inline-block px-2.5 py-1 bg-slate-100 rounded-lg text-[11px] text-slate-600 font-semibold">
+              {{ entityLabel(log.entity) }}
+            </span>
+          </div>
+          <p class="text-[12px] text-slate-600">{{ log.description }}</p>
+        </div>
+      </div>
+
+      <!-- Desktop table (≥ md) -->
+      <div class="hidden md:block overflow-x-auto">
+      <table class="w-full border-collapse text-[13px] min-w-[560px]">
         <thead>
           <tr>
             <th v-for="h in ['Fecha','Admin','Acción','Entidad','Descripción']" :key="h"
@@ -129,6 +157,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
 
       <!-- Paginación -->
       <div v-if="pages > 1" class="flex items-center justify-center gap-4 px-5 py-4 border-t border-slate-100">

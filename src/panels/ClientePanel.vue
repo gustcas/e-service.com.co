@@ -27,12 +27,6 @@
       <!-- Main header -->
       <div class="flex-shrink-0 flex items-start justify-between px-4 pt-4 pb-3 md:px-8 md:pt-7 md:pb-5">
         <div class="flex items-center gap-3">
-          <!-- Hamburger (mobile only) -->
-          <button @click="mobileSidebarOpen = true" class="md:hidden w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center hover:bg-slate-100 transition flex-shrink-0">
-            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/>
-            </svg>
-          </button>
           <div>
             <h2 v-if="page === 'Inicio'" class="text-lg md:text-xl font-black text-[#0f172a] leading-tight">¡Hola, {{ firstName }}! 👋</h2>
             <h2 v-else class="text-lg md:text-xl font-black text-[#0f172a] leading-tight">{{ page }}</h2>
@@ -59,11 +53,18 @@
             :class="['w-9 h-9 rounded-xl flex items-center justify-center transition text-sm', isDark ? 'bg-white/10 hover:bg-white/15' : 'bg-slate-50 hover:bg-slate-100']">
             {{ isDark ? '☀️' : '🌙' }}
           </button>
+          <!-- Cerrar sesión (solo mobile) -->
+          <button @click="emit('logout')" title="Cerrar sesión"
+            class="md:hidden w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center hover:bg-red-100 transition flex-shrink-0">
+            <svg viewBox="0 0 24 24" class="w-[17px] h-[17px] text-red-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+            </svg>
+          </button>
         </div>
       </div>
 
       <!-- Page content (scrollable) -->
-      <div class="flex-1 overflow-y-auto px-4 pb-6 md:px-8 md:pb-8 space-y-6">
+      <div class="flex-1 overflow-y-auto px-4 pb-20 md:px-8 md:pb-8 space-y-6">
 
         <!-- ===== INICIO ===== -->
         <template v-if="page === 'Inicio'">
@@ -296,41 +297,71 @@
           </div>
 
           <!-- LIST VIEW -->
-          <div v-else class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-            <table class="w-full text-sm">
-              <thead class="bg-slate-50">
-                <tr>
-                  <th v-for="h in ['Servicio','Fecha','Ubicación','Valor','Estado','']" :key="h" class="text-left px-5 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-50">
-                <tr v-for="req in pagedReqs" :key="req.id" class="hover:bg-slate-50 transition">
-                  <td class="px-5 py-3.5">
-                    <p class="text-[13px] font-bold text-[#0f172a]">{{ req.name }}</p>
-                    <p class="text-[11px] text-slate-400">#{{ req.num }} · {{ req.description }}</p>
-                  </td>
-                  <td class="px-5 py-3.5 text-[12px] text-slate-500 whitespace-nowrap">{{ req.date }}</td>
-                  <td class="px-5 py-3.5 text-[12px] text-slate-500 max-w-[140px]">
-                    <span v-if="req.is_virtual" class="text-blue-500 font-semibold">💻 Virtual</span>
-                    <span v-else class="truncate block">{{ req.address || '—' }}</span>
-                  </td>
-                  <td class="px-5 py-3.5 font-black text-[#2563ff] text-[13px] whitespace-nowrap">${{ req.price }}</td>
-                  <td class="px-5 py-3.5">
+          <div v-else>
+            <!-- Mobile cards (< md) -->
+            <div class="md:hidden space-y-3">
+              <div v-for="req in pagedReqs" :key="req.id"
+                class="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <p class="font-bold text-[#0f172a] text-[13px]">{{ req.name }}</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">#{{ req.num }} · {{ req.date }}</p>
+                  </div>
+                  <div class="flex flex-col items-end gap-1 flex-shrink-0">
                     <span :class="['text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide', statusBadgeClass(req.status_label)]">{{ req.status_label }}</span>
-                  </td>
-                  <td class="px-5 py-3.5">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <button v-if="req.status === 'payment_pending'" @click="retryPayment(req)" class="text-[11px] font-bold text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition whitespace-nowrap">💳 Pagar</button>
-                      <button v-if="ACTIVE_SET.includes(req.status)" @click="req.completion_code ? Object.assign(codeModal, {open:true,req}) : generateCode(req)" :disabled="generating === req.id" class="text-[11px] font-bold text-blue-600 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition whitespace-nowrap disabled:opacity-60">🔐 Código</button>
-                      <button v-if="(ACTIVE_SET.includes(req.status) || req.status === 'completed') && req.pro" @click="openChatWithPro(req)" class="text-[11px] font-bold text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition whitespace-nowrap">💬 Chat</button>
-                      <button v-if="req.status === 'completed'" @click="openEvidences(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">🖼️ Ver</button>
-                      <button v-if="req.status === 'completed' && isCapacitacionReq(req)" @click="downloadActa(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">📄 Descargar acta</button>
-                      <button v-if="req.status === 'completed' && !req._rated" @click="openRatingModal(req)" class="text-[11px] font-bold text-amber-600 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-50 transition whitespace-nowrap">⭐ Calificar</button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    <span class="font-black text-[#2563ff] text-[13px]">${{ req.price }}</span>
+                  </div>
+                </div>
+                <p class="text-[11px] text-slate-400">
+                  <span v-if="req.is_virtual">💻 Virtual</span>
+                  <span v-else-if="req.address">📍 {{ req.address }}</span>
+                </p>
+                <div class="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-50">
+                  <button v-if="req.status === 'payment_pending'" @click="retryPayment(req)" class="flex-1 text-[12px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 px-3 py-2 rounded-xl transition whitespace-nowrap text-center">💳 Pagar</button>
+                  <button v-if="ACTIVE_SET.includes(req.status)" @click="req.completion_code ? Object.assign(codeModal, {open:true,req}) : generateCode(req)" :disabled="generating === req.id" class="text-[11px] font-bold text-blue-600 border border-blue-200 px-2.5 py-1.5 rounded-xl hover:bg-blue-50 transition whitespace-nowrap disabled:opacity-60">🔐 Código</button>
+                  <button v-if="(ACTIVE_SET.includes(req.status) || req.status === 'completed') && req.pro" @click="openChatWithPro(req)" class="text-[11px] font-bold text-emerald-600 border border-emerald-200 px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 transition whitespace-nowrap">💬 Chat</button>
+                  <button v-if="req.status === 'completed'" @click="openEvidences(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 transition whitespace-nowrap">🖼️ Ver</button>
+                  <button v-if="req.status === 'completed' && !req._rated" @click="openRatingModal(req)" class="text-[11px] font-bold text-amber-600 border border-amber-200 px-2.5 py-1.5 rounded-xl hover:bg-amber-50 transition whitespace-nowrap">⭐ Calificar</button>
+                </div>
+              </div>
+            </div>
+            <!-- Desktop table (≥ md) -->
+            <div class="hidden md:block bg-white border border-slate-100 rounded-2xl overflow-x-auto">
+              <table class="w-full text-sm min-w-[640px]">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th v-for="h in ['Servicio','Fecha','Ubicación','Valor','Estado','']" :key="h" class="text-left px-5 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                  <tr v-for="req in pagedReqs" :key="req.id" class="hover:bg-slate-50 transition">
+                    <td class="px-5 py-3.5">
+                      <p class="text-[13px] font-bold text-[#0f172a]">{{ req.name }}</p>
+                      <p class="text-[11px] text-slate-400">#{{ req.num }} · {{ req.description }}</p>
+                    </td>
+                    <td class="px-5 py-3.5 text-[12px] text-slate-500 whitespace-nowrap">{{ req.date }}</td>
+                    <td class="px-5 py-3.5 text-[12px] text-slate-500 max-w-[140px]">
+                      <span v-if="req.is_virtual" class="text-blue-500 font-semibold">💻 Virtual</span>
+                      <span v-else class="truncate block">{{ req.address || '—' }}</span>
+                    </td>
+                    <td class="px-5 py-3.5 font-black text-[#2563ff] text-[13px] whitespace-nowrap">${{ req.price }}</td>
+                    <td class="px-5 py-3.5">
+                      <span :class="['text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide', statusBadgeClass(req.status_label)]">{{ req.status_label }}</span>
+                    </td>
+                    <td class="px-5 py-3.5">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <button v-if="req.status === 'payment_pending'" @click="retryPayment(req)" class="text-[11px] font-bold text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition whitespace-nowrap">💳 Pagar</button>
+                        <button v-if="ACTIVE_SET.includes(req.status)" @click="req.completion_code ? Object.assign(codeModal, {open:true,req}) : generateCode(req)" :disabled="generating === req.id" class="text-[11px] font-bold text-blue-600 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition whitespace-nowrap disabled:opacity-60">🔐 Código</button>
+                        <button v-if="(ACTIVE_SET.includes(req.status) || req.status === 'completed') && req.pro" @click="openChatWithPro(req)" class="text-[11px] font-bold text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition whitespace-nowrap">💬 Chat</button>
+                        <button v-if="req.status === 'completed'" @click="openEvidences(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">🖼️ Ver</button>
+                        <button v-if="req.status === 'completed' && isCapacitacionReq(req)" @click="downloadActa(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">📄 Descargar acta</button>
+                        <button v-if="req.status === 'completed' && !req._rated" @click="openRatingModal(req)" class="text-[11px] font-bold text-amber-600 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-50 transition whitespace-nowrap">⭐ Calificar</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <!-- PAGINACIÓN -->
@@ -396,8 +427,8 @@
         <template v-else-if="page === 'Mensajes'">
           <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden flex" style="height:calc(100vh - 220px);min-height:480px">
 
-            <!-- LEFT: lista de conversaciones -->
-            <div class="w-64 flex-shrink-0 border-r border-slate-100 flex flex-col">
+            <!-- LEFT: lista de conversaciones — full width on mobile when no conv selected -->
+            <div :class="['border-r border-slate-100 flex flex-col flex-shrink-0', inlineChat.convId ? 'hidden md:flex md:w-64' : 'flex w-full md:w-64']">
               <div class="p-3 border-b border-slate-100">
                 <input v-model="convSearchText" type="text" placeholder="Buscar conversación..."
                   class="w-full bg-slate-50 rounded-xl px-3 py-2 text-[12px] outline-none border border-slate-200 focus:border-blue-400 transition" />
@@ -424,8 +455,8 @@
               </div>
             </div>
 
-            <!-- RIGHT: área de chat -->
-            <div class="flex-1 flex flex-col min-w-0">
+            <!-- RIGHT: área de chat — hidden on mobile when no conv selected -->
+            <div :class="['flex-col min-w-0', inlineChat.convId ? 'flex flex-1' : 'hidden md:flex md:flex-1']">
 
               <!-- Sin conversación seleccionada -->
               <div v-if="!inlineChat.convId" class="flex-1 flex flex-col items-center justify-center text-slate-300">
@@ -436,7 +467,11 @@
 
               <template v-else>
                 <!-- Cabecera -->
-                <div class="flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 flex-shrink-0">
+                <div class="flex items-center gap-3 px-4 md:px-5 py-3.5 border-b border-slate-100 flex-shrink-0">
+                  <!-- Back button mobile -->
+                  <button @click="inlineChat.convId = null" class="md:hidden w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition flex-shrink-0">
+                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+                  </button>
                   <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-[13px] flex-shrink-0" :style="{background: inlineChat.color}">{{ inlineChat.initial }}</div>
                   <div class="flex-1 min-w-0">
                     <p class="font-bold text-[#0f172a] text-[14px] leading-tight">{{ inlineChat.name }}</p>
@@ -502,7 +537,7 @@
 
         <!-- ===== PAGOS Y FACTURAS ===== -->
         <template v-else-if="page === 'Pagos y facturas'">
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard icon="💰" iconBg="bg-emerald-100" :value="payStats.total"  label="Total pagado" trend="12" :dark="isDark" />
             <StatCard icon="📅" iconBg="bg-blue-100"    :value="payStats.mes"    label="Este mes"               :dark="isDark" />
             <StatCard icon="⏳" iconBg="bg-amber-100"   :value="payStats.pend"   label="Pendiente"               :dark="isDark" />
@@ -512,33 +547,70 @@
               <span class="font-black text-[#0f172a]">Historial de pagos</span>
               <button class="text-[13px] font-semibold text-[#2563ff] border border-blue-200 px-4 py-1.5 rounded-xl hover:bg-blue-50 transition">Descargar PDF</button>
             </div>
-            <table class="w-full text-sm">
-              <thead class="bg-slate-50">
-                <tr>
-                  <th v-for="h in ['Servicio','Profesional','Fecha','Monto','Estado','']" :key="h" class="text-left px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-50">
-                <tr v-for="p in payments" :key="p.id" class="hover:bg-slate-50 transition">
-                  <td class="px-6 py-4 font-semibold text-[#0f172a] text-[13px]">{{ p.service }}</td>
-                  <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.pro }}</td>
-                  <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.date }}</td>
-                  <td class="px-6 py-4 font-bold text-[#0f172a] text-[13px]">{{ p.amount }}</td>
-                  <td class="px-6 py-4"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">Pagado</span></td>
-                  <td class="px-6 py-4"><button @click="openInvoice(p)" class="text-[12px] text-[#2563ff] font-semibold hover:underline">Ver factura</button></td>
-                </tr>
-              </tbody>
-            </table>
+            <!-- Mobile cards (< md) -->
+            <div class="md:hidden divide-y divide-slate-50">
+              <div v-for="p in payHistPagedItems" :key="p.id" class="p-4 space-y-2.5">
+                <div class="flex items-start justify-between gap-2">
+                  <p class="font-semibold text-[#0f172a] text-[13px]">{{ p.service }}</p>
+                  <span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold flex-shrink-0">Pagado</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[12px]">
+                  <div>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Profesional</p>
+                    <p class="text-slate-600 mt-0.5">{{ p.pro }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Fecha</p>
+                    <p class="text-slate-500 mt-0.5">{{ p.date }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Monto</p>
+                    <p class="font-bold text-[#0f172a] mt-0.5">{{ p.amount }}</p>
+                  </div>
+                  <div class="flex items-end">
+                    <button @click="openInvoice(p)" class="text-[12px] text-[#2563ff] font-semibold hover:underline">Ver factura</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Mobile pagination -->
+            <div v-if="payHistTotalPages > 1" class="md:hidden flex items-center justify-center gap-3 px-4 py-3 border-t border-slate-100">
+              <button :disabled="payHistPage <= 1" @click="payHistPage--"
+                class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">‹</button>
+              <span class="text-[12px] text-slate-500 font-semibold">{{ payHistPage }} / {{ payHistTotalPages }}</span>
+              <button :disabled="payHistPage >= payHistTotalPages" @click="payHistPage++"
+                class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">›</button>
+            </div>
+            <!-- Desktop table (≥ md) -->
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-sm min-w-[520px]">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th v-for="h in ['Servicio','Profesional','Fecha','Monto','Estado','']" :key="h" class="text-left px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                  <tr v-for="p in payments" :key="p.id" class="hover:bg-slate-50 transition">
+                    <td class="px-6 py-4 font-semibold text-[#0f172a] text-[13px]">{{ p.service }}</td>
+                    <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.pro }}</td>
+                    <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.date }}</td>
+                    <td class="px-6 py-4 font-bold text-[#0f172a] text-[13px]">{{ p.amount }}</td>
+                    <td class="px-6 py-4"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">Pagado</span></td>
+                    <td class="px-6 py-4"><button @click="openInvoice(p)" class="text-[12px] text-[#2563ff] font-semibold hover:underline">Ver factura</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </template>
 
         <!-- ===== CONFIGURACIÓN ===== -->
         <template v-else-if="page === 'Configuración'">
-          <div class="grid grid-cols-3 gap-6">
-            <div class="col-span-2 space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 space-y-5">
               <div class="bg-white border border-slate-100 rounded-2xl p-6 space-y-4">
                 <h3 class="font-black text-[#0f172a]">Información personal</h3>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Nombre</label>
                     <input v-model="configForm.name" type="text" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition bg-slate-50 focus:bg-white" />
@@ -625,10 +697,27 @@
         </template>
 
       </div>
+
+      <!-- Mobile Bottom Tab Bar — todos los menús con scroll horizontal -->
+      <nav class="md:hidden flex-shrink-0 bg-white border-t border-slate-100" style="padding-bottom:env(safe-area-inset-bottom,0px)">
+        <div class="flex overflow-x-auto" style="scrollbar-width:none;-ms-overflow-style:none">
+          <button v-for="item in navItems.filter(i => !i.divider)" :key="item.name"
+            @click="page = item.name"
+            :class="['flex-shrink-0 flex flex-col items-center gap-0.5 pt-2 pb-1.5 px-3 min-w-[62px] transition-colors',
+              page === item.name ? 'text-[#2563ff]' : 'text-slate-400']">
+            <div :class="['relative w-10 h-8 rounded-xl flex items-center justify-center transition-colors',
+              page === item.name ? 'bg-blue-50' : '']">
+              <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" v-html="item.iconSvg"/>
+              <span v-if="item.badge" class="absolute -top-1 -right-1 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center leading-none">{{ item.badge > 9 ? '9+' : item.badge }}</span>
+            </div>
+            <span class="text-[10px] font-bold whitespace-nowrap">{{ item.label ?? item.name }}</span>
+          </button>
+        </div>
+      </nav>
     </div>
 
-    <!-- Right panel (Inicio only) -->
-    <div v-if="page === 'Inicio'" class="w-64 flex-shrink-0 overflow-y-auto space-y-3">
+    <!-- Right panel (Inicio only) — hidden on mobile/tablet, visible xl+ -->
+    <div v-if="page === 'Inicio'" class="hidden xl:block w-64 flex-shrink-0 overflow-y-auto space-y-3">
       <div class="bg-white rounded-2xl shadow-sm px-5 py-4 flex items-center gap-3">
         <div class="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-black text-base flex-shrink-0">{{ userInitial }}</div>
         <div class="flex-1 min-w-0">
@@ -1489,16 +1578,16 @@ const SVG = {
 const unreadCounts = ref({ notifications: 0, messages: 0, pending_requests: 0 })
 
 const navItems = computed(() => [
-  { name:'Inicio',           iconSvg: SVG.home     },
-  { name:'Mis solicitudes',  iconSvg: SVG.clip,    badge: unreadCounts.value.pending_requests || undefined },
-  { name:'Favoritos',        iconSvg: SVG.heart    },
+  { name:'Inicio',           label:'Inicio',      iconSvg: SVG.home     },
+  { name:'Mis solicitudes',  label:'Solicitudes', iconSvg: SVG.clip,    badge: unreadCounts.value.pending_requests || undefined },
+  { name:'Favoritos',        label:'Favoritos',   iconSvg: SVG.heart    },
   { divider: true },
-  { name:'Mensajes',         iconSvg: SVG.message, badge: unreadCounts.value.messages        || undefined },
-  { name:'Notificaciones',   iconSvg: SVG.bell,    badge: unreadCounts.value.notifications   || undefined },
+  { name:'Mensajes',         label:'Mensajes',    iconSvg: SVG.message, badge: unreadCounts.value.messages        || undefined },
+  { name:'Notificaciones',   label:'Notifs',      iconSvg: SVG.bell,    badge: unreadCounts.value.notifications   || undefined },
   { divider: true },
-  { name:'Pagos y facturas', iconSvg: SVG.card     },
-  { name:'Configuración',    iconSvg: SVG.settings },
-  { name:'Ayuda',            iconSvg: SVG.help     },
+  { name:'Pagos y facturas', label:'Pagos',       iconSvg: SVG.card     },
+  { name:'Configuración',    label:'Ajustes',     iconSvg: SVG.settings },
+  { name:'Ayuda',            label:'Ayuda',       iconSvg: SVG.help     },
 ])
 
 // ─── Categories ──────────────────────────────────────────────────────────────
@@ -1976,6 +2065,14 @@ const payStats = computed(() => ({
   mes:   '$0',
   pend:  '$0',
 }))
+
+const PAY_MOBILE_PG = 5
+const payHistPage = ref(1)
+const payHistPagedItems = computed(() => {
+  const start = (payHistPage.value - 1) * PAY_MOBILE_PG
+  return payments.value.slice(start, start + PAY_MOBILE_PG)
+})
+const payHistTotalPages = computed(() => Math.ceil(payments.value.length / PAY_MOBILE_PG))
 
 // ─── Configuración ───────────────────────────────────────────────────────────
 const configForm = reactive({ name: '', email: '', phone: '', city: '' })

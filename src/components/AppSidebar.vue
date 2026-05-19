@@ -50,7 +50,7 @@
               <svg v-if="item.iconSvg" viewBox="0 0 24 24" class="w-[17px] h-[17px]" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" v-html="item.iconSvg" />
               <span v-else class="text-sm leading-none">{{ item.icon }}</span>
             </span>
-            {{ item.name }}
+            {{ item.label ?? item.name }}
           </span>
           <span
             v-if="item.badge"

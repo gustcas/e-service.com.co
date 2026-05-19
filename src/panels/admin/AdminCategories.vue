@@ -24,7 +24,7 @@
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
       <div class="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-3">
         <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
           <svg viewBox="0 0 24 24" class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
@@ -78,22 +78,24 @@
         :class="expandedIds.includes(cat.id) ? 'border-blue-200 shadow-sm' : 'border-slate-100'">
 
         <!-- Category header -->
-        <div class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition select-none"
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition select-none"
           :class="expandedIds.includes(cat.id) ? 'bg-blue-50/50' : ''"
           @click="toggleExpand(cat.id)">
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-xl bg-[#0d4f5c] flex items-center justify-center text-white font-black text-base flex-shrink-0">
               {{ cat.name.charAt(0).toUpperCase() }}
             </div>
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
               <p class="font-bold text-[#0f172a] text-[14px]">{{ cat.name }}</p>
               <div class="flex items-center gap-2 mt-0.5">
                 <span class="text-[11px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">{{ cat.services?.length ?? 0 }} servicios</span>
                 <span v-if="cat.services?.length" class="text-[11px] text-slate-400">desde ${{ fmtCOP(minPrice(cat.services)) }}</span>
               </div>
             </div>
+            <!-- Chevron on mobile only -->
+            <svg class="md:hidden w-4 h-4 text-slate-400 transition-transform flex-shrink-0" :class="expandedIds.includes(cat.id) ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
-          <div class="flex items-center gap-2 flex-shrink-0" @click.stop>
+          <div class="flex items-center gap-2 mt-2 md:mt-0 flex-shrink-0" @click.stop>
             <button @click="openSvcModal(null, cat)"
               class="text-[12px] bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-200 transition">
               + Servicio
@@ -106,7 +108,8 @@
               class="text-[12px] bg-red-100 text-red-600 font-bold px-3 py-1.5 rounded-lg hover:bg-red-200 transition">
               Eliminar
             </button>
-            <svg class="w-4 h-4 text-slate-400 transition-transform" :class="expandedIds.includes(cat.id) ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <!-- Chevron on desktop only -->
+            <svg class="hidden md:block w-4 h-4 text-slate-400 transition-transform" :class="expandedIds.includes(cat.id) ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
         </div>
 
@@ -116,31 +119,79 @@
             Sin servicios.
             <button @click="openSvcModal(null, cat)" class="text-blue-600 font-semibold hover:underline">Agregar uno</button>
           </div>
-          <table v-else class="w-full text-sm">
-            <thead class="bg-slate-50">
-              <tr>
-                <th v-for="h in ['Servicio','Precio','Aliados%','Pasarela%','IMAVICX%','ASECALIDAD%','Mant%','']" :key="h"
-                  class="text-left px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide whitespace-nowrap">{{ h }}</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-50">
-              <tr v-for="svc in cat.services" :key="svc.id" class="hover:bg-slate-50 transition">
-                <td class="px-4 py-3 font-semibold text-[#0f172a] text-[13px]">{{ svc.name }}</td>
-                <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-700 text-[11px] font-bold px-2 py-0.5 rounded-lg">${{ fmtCOP(svc.price) }}</span></td>
-                <td class="px-4 py-3 text-slate-500 text-[12px]">{{ svc.allies_percentage ?? '—' }}%</td>
-                <td class="px-4 py-3 text-slate-500 text-[12px]">{{ svc.payment_gateway_commission ?? '—' }}%</td>
-                <td class="px-4 py-3 text-slate-500 text-[12px]">{{ svc.imavicx_commission ?? '—' }}%</td>
-                <td class="px-4 py-3 text-slate-500 text-[12px]">{{ svc.asecalidad_commission ?? '—' }}%</td>
-                <td class="px-4 py-3 text-slate-500 text-[12px]">{{ svc.maintenance_percentage ?? '—' }}%</td>
-                <td class="px-4 py-3">
-                  <div class="flex gap-2 justify-end">
-                    <button @click="openSvcModal(svc, cat)" class="text-[11px] text-blue-600 hover:underline font-semibold">Editar</button>
-                    <button @click="askDelete('service', svc)" class="text-[11px] text-red-500 hover:underline font-semibold">Eliminar</button>
+          <template v-else>
+            <!-- Mobile cards (< md) -->
+            <div class="md:hidden divide-y divide-slate-50">
+              <div v-for="svc in cat.services" :key="svc.id" class="p-4 space-y-2.5">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="font-bold text-[#0f172a] text-[13px]">{{ svc.name }}</p>
+                  <span class="bg-emerald-100 text-emerald-700 text-[11px] font-bold px-2.5 py-1 rounded-lg flex-shrink-0">
+                    ${{ fmtCOP(svc.price) }}
+                  </span>
+                </div>
+                <div class="grid grid-cols-3 gap-x-3 gap-y-1.5 text-[11px]">
+                  <div>
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">Aliados</p>
+                    <p class="text-slate-600 font-semibold">{{ svc.allies_percentage ?? '—' }}%</p>
                   </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  <div>
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">Pasarela</p>
+                    <p class="text-slate-600 font-semibold">{{ svc.payment_gateway_commission ?? '—' }}%</p>
+                  </div>
+                  <div>
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">IMAVICX</p>
+                    <p class="text-slate-600 font-semibold">{{ svc.imavicx_commission ?? '—' }}%</p>
+                  </div>
+                  <div>
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">ASECAL.</p>
+                    <p class="text-slate-600 font-semibold">{{ svc.asecalidad_commission ?? '—' }}%</p>
+                  </div>
+                  <div>
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">Mant.</p>
+                    <p class="text-slate-600 font-semibold">{{ svc.maintenance_percentage ?? '—' }}%</p>
+                  </div>
+                </div>
+                <div class="flex gap-2 pt-1 border-t border-slate-50">
+                  <button @click="openSvcModal(svc, cat)"
+                    class="flex-1 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-[12px] font-semibold hover:bg-blue-100 transition">
+                    Editar
+                  </button>
+                  <button @click="askDelete('service', svc)"
+                    class="flex-1 py-1.5 rounded-lg bg-red-50 text-red-600 text-[12px] font-semibold hover:bg-red-100 transition">
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- Desktop table (≥ md) -->
+            <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-sm min-w-[640px]">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th v-for="h in ['Servicio','Precio','Aliados%','Pasarela%','IMAVICX%','ASECALIDAD%','Mant%','']" :key="h"
+                    class="text-left px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide whitespace-nowrap">{{ h }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-50">
+                <tr v-for="svc in cat.services" :key="svc.id" class="hover:bg-slate-50 transition">
+                  <td class="px-4 py-3 font-semibold text-[#0f172a] text-[13px]">{{ svc.name }}</td>
+                  <td class="px-4 py-3"><span class="bg-emerald-100 text-emerald-700 text-[11px] font-bold px-2 py-0.5 rounded-lg">${{ fmtCOP(svc.price) }}</span></td>
+                  <td class="px-4 py-3 text-slate-500 text-[12px]">{{ svc.allies_percentage ?? '—' }}%</td>
+                  <td class="px-4 py-3 text-slate-500 text-[12px]">{{ svc.payment_gateway_commission ?? '—' }}%</td>
+                  <td class="px-4 py-3 text-slate-500 text-[12px]">{{ svc.imavicx_commission ?? '—' }}%</td>
+                  <td class="px-4 py-3 text-slate-500 text-[12px]">{{ svc.asecalidad_commission ?? '—' }}%</td>
+                  <td class="px-4 py-3 text-slate-500 text-[12px]">{{ svc.maintenance_percentage ?? '—' }}%</td>
+                  <td class="px-4 py-3">
+                    <div class="flex gap-2 justify-end">
+                      <button @click="openSvcModal(svc, cat)" class="text-[11px] text-blue-600 hover:underline font-semibold">Editar</button>
+                      <button @click="askDelete('service', svc)" class="text-[11px] text-red-500 hover:underline font-semibold">Eliminar</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+          </template>
         </div>
       </div>
     </div>
