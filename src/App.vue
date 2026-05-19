@@ -1,22 +1,19 @@
 <template>
-  <div id="app">
-    <router-view />
-  </div>
+  <router-view />
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
-import { useAuthStore } from '@/stores/auth';
+import { watch } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 
-const authStore = useAuthStore();
+const authStore  = useAuthStore()
+const themeStore = useThemeStore()
 
-onMounted(() => {
-  // Initialize authentication state from localStorage
-  authStore.initAuth();
-});
+authStore.initAuth()
+
+const applyTheme = (dark) => document.documentElement.classList.toggle('dark', dark)
+
+applyTheme(themeStore.isDark)
+watch(() => themeStore.isDark, applyTheme)
 </script>
-
-<style>
-/* Import global styles */
-@import './assets/landing.css';
-</style>
