@@ -1,17 +1,7 @@
-import api from "./api";
+import api from './api'
 
 export default {
-
-   async getListProfessionals() {
-    return await api.get("/professionals");
-  },
-
-  async getDashboard() {
-    return await api.get("/professional/dashboard");
-  },
-
-  async saveProfile(data) {
-    return await api.post("/professional/profile", data);
-  }
-
-};
+  getListProfessionals() { return api.get('/professionals') },
+  getDashboard()         { return api.get('/professional/dashboard') },
+  saveProfile(data)      { return api.post('/professional/profile', data) },
+}

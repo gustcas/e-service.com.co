@@ -1,23 +1,8 @@
-import api from "./api";
+import api from './api'
 
 export default {
-
-    async store(data) {
-
-        return await api.post("/admin/services", data);
-
-    },
-
-    async update(id, data) {
-
-        return await api.put(`/admin/services/${id}`, data);
-
-    },
-
-    async delete(id) {
-
-        return await api.delete(`/admin/services/${id}`);
-
-    }
-
+  getAll(params)    { return api.get('/admin/services', { params }) },
+  store(data)       { return api.post('/admin/services', data) },
+  update(id, data)  { return api.put(`/admin/services/${id}`, data) },
+  delete(id)        { return api.delete(`/admin/services/${id}`) },
 }
