@@ -14,7 +14,7 @@
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
           <svg viewBox="0 0 24 24" class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -68,78 +68,132 @@
         <span class="text-[12px] text-slate-400 font-semibold">{{ filtered.length }} resultado{{ filtered.length !== 1 ? 's' : '' }}</span>
       </div>
 
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50">
-          <tr>
-            <th v-for="h in ['Administrador','Módulos','Estado','Creado','Acciones']" :key="h"
-              class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-50">
-          <tr v-if="!filtered.length">
-            <td colspan="5" class="px-5 py-8 text-center text-slate-300 text-[13px]">
-              No se encontraron administradores con "{{ search }}"
-            </td>
-          </tr>
-          <tr v-for="admin in filtered" :key="admin.id" class="hover:bg-slate-50 transition">
-            <!-- Info -->
-            <td class="px-5 py-4">
-              <div class="flex items-center gap-3">
+      <!-- Empty filter result -->
+      <div v-if="!filtered.length" class="px-5 py-8 text-center text-slate-300 text-[13px]">
+        No se encontraron administradores con "{{ search }}"
+      </div>
+
+      <template v-else>
+        <!-- Mobile cards (< md) -->
+        <div class="md:hidden divide-y divide-slate-50">
+          <div v-for="admin in admMobilePagedItems" :key="admin.id" class="p-4 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5">
                 <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${admin.name}`"
-                  class="w-9 h-9 rounded-xl border border-slate-200 flex-shrink-0" alt="" />
+                  class="w-10 h-10 rounded-xl border border-slate-200 flex-shrink-0" alt="" />
                 <div>
                   <p class="font-bold text-[#0f172a] text-[13px]">{{ admin.name }}</p>
-                  <p class="text-[11px] text-slate-400">{{ admin.email }}</p>
+                  <p class="text-[10px] text-slate-400">{{ admin.email }}</p>
                 </div>
               </div>
-            </td>
-            <!-- Módulos -->
-            <td class="px-5 py-4">
-              <div class="flex flex-wrap gap-1">
-                <template v-for="(perms, mod) in admin.modules" :key="mod">
-                  <span v-if="perms?.enabled"
-                    class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md"
-                    :title="`${moduleLabel(mod)}: ${activePerms(perms).join(', ')}`">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
-                    {{ moduleLabel(mod) }}
-                    <span class="bg-emerald-200/60 text-emerald-800 px-1 rounded text-[9px] font-black tracking-wide">{{ activePermsShort(perms) }}</span>
-                  </span>
-                </template>
-                <span v-if="!Object.values(admin.modules ?? {}).some(p => p?.enabled)" class="text-[11px] text-slate-300">Sin accesos</span>
-              </div>
-            </td>
-            <!-- Estado -->
-            <td class="px-5 py-4">
-              <span :class="['inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full',
+              <span :class="['inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0',
                 admin.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600']">
-                <span class="w-1.5 h-1.5 rounded-full bg-current flex-shrink-0"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
                 {{ admin.is_active ? 'Activo' : 'Inactivo' }}
               </span>
-            </td>
-            <!-- Fecha -->
-            <td class="px-5 py-4 text-[12px] text-slate-400">{{ fmtDate(admin.created_at) }}</td>
-            <!-- Acciones -->
-            <td class="px-5 py-4">
-              <div class="flex gap-2">
-                <button @click="openEdit(admin)" title="Editar"
-                  class="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center transition">
-                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                </button>
-                <button @click="toggleStatus(admin)" :title="admin.is_active ? 'Inhabilitar' : 'Habilitar'"
-                  :class="['w-8 h-8 rounded-lg flex items-center justify-center transition',
-                    admin.is_active ? 'bg-amber-50 hover:bg-amber-100' : 'bg-emerald-50 hover:bg-emerald-100']">
-                  <svg v-if="admin.is_active" viewBox="0 0 24 24" class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
-                  <svg v-else viewBox="0 0 24 24" class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                </button>
-                <button @click="askDelete(admin)" title="Eliminar"
-                  class="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition">
-                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+            <div class="flex flex-wrap gap-1">
+              <template v-for="(perms, mod) in admin.modules" :key="mod">
+                <span v-if="perms?.enabled"
+                  class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                  {{ moduleLabel(mod) }}
+                </span>
+              </template>
+              <span v-if="!Object.values(admin.modules ?? {}).some(p => p?.enabled)" class="text-[11px] text-slate-300">Sin accesos</span>
+            </div>
+            <p class="text-[10px] text-slate-400">Creado: {{ fmtDate(admin.created_at) }}</p>
+            <div class="flex gap-2 pt-2 border-t border-slate-50">
+              <button @click="openEdit(admin)"
+                class="flex-1 py-2 rounded-xl bg-blue-50 text-blue-700 text-[12px] font-semibold hover:bg-blue-100 transition">
+                Editar
+              </button>
+              <button @click="toggleStatus(admin)"
+                :class="['flex-1 py-2 rounded-xl text-[12px] font-semibold transition', admin.is_active ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100']">
+                {{ admin.is_active ? 'Inhabilitar' : 'Habilitar' }}
+              </button>
+              <button @click="askDelete(admin)"
+                class="px-3 py-2 rounded-xl bg-red-50 text-red-600 text-[12px] font-semibold hover:bg-red-100 transition">
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Mobile pagination -->
+        <div v-if="admMobileTotalPages > 1" class="md:hidden flex items-center justify-center gap-3 px-4 py-3 border-t border-slate-100">
+          <button :disabled="admMobilePage <= 1" @click="admMobilePage--"
+            class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">‹</button>
+          <span class="text-[12px] text-slate-500 font-semibold">{{ admMobilePage }} / {{ admMobileTotalPages }}</span>
+          <button :disabled="admMobilePage >= admMobileTotalPages" @click="admMobilePage++"
+            class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">›</button>
+        </div>
+
+        <!-- Desktop table (≥ md) -->
+        <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-sm min-w-[560px]">
+          <thead class="bg-slate-50">
+            <tr>
+              <th v-for="h in ['Administrador','Módulos','Estado','Creado','Acciones']" :key="h"
+                class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            <tr v-for="admin in filtered" :key="admin.id" class="hover:bg-slate-50 transition">
+              <td class="px-5 py-4">
+                <div class="flex items-center gap-3">
+                  <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${admin.name}`"
+                    class="w-9 h-9 rounded-xl border border-slate-200 flex-shrink-0" alt="" />
+                  <div>
+                    <p class="font-bold text-[#0f172a] text-[13px]">{{ admin.name }}</p>
+                    <p class="text-[11px] text-slate-400">{{ admin.email }}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-4">
+                <div class="flex flex-wrap gap-1">
+                  <template v-for="(perms, mod) in admin.modules" :key="mod">
+                    <span v-if="perms?.enabled"
+                      class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md"
+                      :title="`${moduleLabel(mod)}: ${activePerms(perms).join(', ')}`">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                      {{ moduleLabel(mod) }}
+                      <span class="bg-emerald-200/60 text-emerald-800 px-1 rounded text-[9px] font-black tracking-wide">{{ activePermsShort(perms) }}</span>
+                    </span>
+                  </template>
+                  <span v-if="!Object.values(admin.modules ?? {}).some(p => p?.enabled)" class="text-[11px] text-slate-300">Sin accesos</span>
+                </div>
+              </td>
+              <td class="px-5 py-4">
+                <span :class="['inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full',
+                  admin.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600']">
+                  <span class="w-1.5 h-1.5 rounded-full bg-current flex-shrink-0"></span>
+                  {{ admin.is_active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td class="px-5 py-4 text-[12px] text-slate-400">{{ fmtDate(admin.created_at) }}</td>
+              <td class="px-5 py-4">
+                <div class="flex gap-2">
+                  <button @click="openEdit(admin)" title="Editar"
+                    class="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center transition">
+                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button @click="toggleStatus(admin)" :title="admin.is_active ? 'Inhabilitar' : 'Habilitar'"
+                    :class="['w-8 h-8 rounded-lg flex items-center justify-center transition',
+                      admin.is_active ? 'bg-amber-50 hover:bg-amber-100' : 'bg-emerald-50 hover:bg-emerald-100']">
+                    <svg v-if="admin.is_active" viewBox="0 0 24 24" class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
+                    <svg v-else viewBox="0 0 24 24" class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </button>
+                  <button @click="askDelete(admin)" title="Eliminar"
+                    class="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition">
+                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </template>
     </div>
 
     <!-- ── Modal Crear / Editar ── -->
@@ -296,7 +350,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import api from '@/services/api'
 import { useAdminToast } from './useAdminToast'
 
@@ -345,6 +399,15 @@ const filtered = computed(() => {
     a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q)
   )
 })
+
+const ADM_MOBILE_PG = 6
+const admMobilePage = ref(1)
+const admMobilePagedItems = computed(() => {
+  const start = (admMobilePage.value - 1) * ADM_MOBILE_PG
+  return filtered.value.slice(start, start + ADM_MOBILE_PG)
+})
+const admMobileTotalPages = computed(() => Math.ceil(filtered.value.length / ADM_MOBILE_PG))
+watch(search, () => { admMobilePage.value = 1 })
 
 // ── Modal state ────────────────────────────────────────────
 const modal = reactive({ open: false, mode: 'create', saving: false, error: '', editId: null, adminName: '' })

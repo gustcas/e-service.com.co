@@ -34,7 +34,7 @@
     <template v-else-if="report">
 
       <!-- ── KPI cards ── -->
-      <div class="grid grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div v-for="kpi in kpiCards" :key="kpi.label"
           class="bg-white border border-slate-100 rounded-2xl p-5 flex items-start justify-between gap-3">
           <div class="flex-1 min-w-0">
@@ -48,7 +48,7 @@
       </div>
 
       <!-- ── Estado + Evolución mensual ── -->
-      <div class="grid grid-cols-2 gap-5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
 
         <!-- Por estado -->
         <div class="bg-white border border-slate-100 rounded-2xl p-5">
@@ -116,45 +116,86 @@
         <div class="px-5 py-4 border-b border-slate-100">
           <p class="font-black text-[#0f172a] text-[14px]">Solicitudes por categoría</p>
         </div>
-        <table class="w-full text-[13px]">
-          <thead>
-            <tr>
-              <th v-for="h in ['Categoría','Total','Completadas','Tasa de éxito','Revenue']" :key="h"
-                class="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wide border-b border-slate-50 bg-slate-50 text-left">
-                {{ h }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="c in report.by_category" :key="c.name"
-              class="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition">
-              <td class="px-5 py-3 font-semibold text-[#0f172a]">{{ c.name }}</td>
-              <td class="px-5 py-3 text-slate-600">{{ c.total }}</td>
-              <td class="px-5 py-3">
-                <span class="font-semibold text-emerald-700">{{ c.completed }}</span>
-              </td>
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-2">
-                  <div class="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full bg-emerald-500 rounded-full"
-                      :style="{width: c.total > 0 ? `${Math.round((c.completed / c.total) * 100)}%` : '0%'}"></div>
-                  </div>
-                  <span class="text-[12px] text-slate-500 tabular-nums">
-                    {{ c.total > 0 ? Math.round((c.completed / c.total) * 100) : 0 }}%
-                  </span>
+
+        <div v-if="!report.by_category.length" class="px-5 py-8 text-center text-slate-300 text-[13px]">
+          Sin datos de categorías
+        </div>
+        <template v-else>
+          <!-- Mobile cards (< md) -->
+          <div class="md:hidden divide-y divide-slate-50">
+            <div v-for="c in catMobilePagedItems" :key="c.name" class="px-4 py-3 space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <p class="font-bold text-[#0f172a] text-[13px]">{{ c.name }}</p>
+                <p class="font-bold text-[#0f172a] text-[13px]">{{ formatCOP(c.revenue) }}</p>
+              </div>
+              <div class="grid grid-cols-3 gap-2 text-[12px]">
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase font-bold">Total</p>
+                  <p class="font-semibold text-slate-600">{{ c.total }}</p>
                 </div>
-              </td>
-              <td class="px-5 py-3 font-bold text-[#0f172a]">{{ formatCOP(c.revenue) }}</td>
-            </tr>
-            <tr v-if="!report.by_category.length">
-              <td colspan="5" class="px-5 py-8 text-center text-slate-300 text-[13px]">Sin datos de categorías</td>
-            </tr>
-          </tbody>
-        </table>
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase font-bold">Completadas</p>
+                  <p class="font-semibold text-emerald-700">{{ c.completed }}</p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase font-bold">Éxito</p>
+                  <p class="font-semibold text-slate-600">{{ c.total > 0 ? Math.round((c.completed / c.total) * 100) : 0 }}%</p>
+                </div>
+              </div>
+              <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-emerald-500 rounded-full"
+                  :style="{width: c.total > 0 ? `${Math.round((c.completed / c.total) * 100)}%` : '0%'}"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Mobile pagination -->
+          <div v-if="catMobileTotalPages > 1" class="md:hidden flex items-center justify-center gap-3 px-4 py-3 border-t border-slate-100">
+            <button :disabled="catMobilePage <= 1" @click="catMobilePage--"
+              class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">‹</button>
+            <span class="text-[12px] text-slate-500 font-semibold">{{ catMobilePage }} / {{ catMobileTotalPages }}</span>
+            <button :disabled="catMobilePage >= catMobileTotalPages" @click="catMobilePage++"
+              class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">›</button>
+          </div>
+          <!-- Desktop table (≥ md) -->
+          <div class="hidden md:block overflow-x-auto">
+          <table class="w-full text-[13px] min-w-[500px]">
+            <thead>
+              <tr>
+                <th v-for="h in ['Categoría','Total','Completadas','Tasa de éxito','Revenue']" :key="h"
+                  class="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wide border-b border-slate-50 bg-slate-50 text-left">
+                  {{ h }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="c in report.by_category" :key="c.name"
+                class="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition">
+                <td class="px-5 py-3 font-semibold text-[#0f172a]">{{ c.name }}</td>
+                <td class="px-5 py-3 text-slate-600">{{ c.total }}</td>
+                <td class="px-5 py-3">
+                  <span class="font-semibold text-emerald-700">{{ c.completed }}</span>
+                </td>
+                <td class="px-5 py-3">
+                  <div class="flex items-center gap-2">
+                    <div class="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div class="h-full bg-emerald-500 rounded-full"
+                        :style="{width: c.total > 0 ? `${Math.round((c.completed / c.total) * 100)}%` : '0%'}"></div>
+                    </div>
+                    <span class="text-[12px] text-slate-500 tabular-nums">
+                      {{ c.total > 0 ? Math.round((c.completed / c.total) * 100) : 0 }}%
+                    </span>
+                  </div>
+                </td>
+                <td class="px-5 py-3 font-bold text-[#0f172a]">{{ formatCOP(c.revenue) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </template>
       </div>
 
       <!-- ── Top profesionales + Usuarios ── -->
-      <div class="grid grid-cols-2 gap-5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
 
         <!-- Top profesionales -->
         <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
@@ -219,11 +260,23 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+
 import api from '@/services/api'
 
 const reportEl = ref(null)
 const report   = ref(null)
 const loading  = ref(true)
+
+const catMobilePage = ref(1)
+const catMobilePagedItems = computed(() => {
+  if (!report.value) return []
+  const start = (catMobilePage.value - 1) * 6
+  return report.value.by_category.slice(start, start + 6)
+})
+const catMobileTotalPages = computed(() => {
+  if (!report.value) return 0
+  return Math.ceil(report.value.by_category.length / 6)
+})
 
 const today = computed(() =>
   new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })

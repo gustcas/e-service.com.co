@@ -23,7 +23,7 @@
     </div>
 
     <!-- KPI cards 2x4 -->
-    <div class="grid grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
       <div v-for="kpi in kpis" :key="kpi.key"
         class="bg-white border border-slate-100 rounded-2xl p-5 flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0">
@@ -98,70 +98,127 @@
         <p class="text-slate-400 text-xs mt-1">No hay solicitudes que coincidan con los filtros</p>
       </div>
       <!-- table -->
-      <div v-else class="bg-white border border-slate-100 rounded-2xl overflow-auto">
-        <table class="w-full border-collapse text-[13px]">
-          <thead>
-            <tr>
-              <th v-for="h in ['ID','Servicio','Cliente','Profesional','Estado','Creado','Actualizado','Tiempo','Detalle']" :key="h"
-                class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wide border-b border-slate-100 bg-slate-50 text-left whitespace-nowrap first:pl-5">
-                {{ h }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="req in filteredRequests" :key="req.id" class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
-              <td class="px-4 py-3 pl-5 whitespace-nowrap">
+      <div v-else>
+        <!-- Mobile cards (< md) -->
+        <div class="md:hidden space-y-3">
+          <div v-for="req in reqMobilePagedItems" :key="req.id" class="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div>
                 <span class="text-[12px] font-bold text-[#0d4f5c]">#{{ String(req.id).padStart(4,'0') }}</span>
-              </td>
-              <td class="px-4 py-3">
-                <span class="text-[12px] font-semibold text-slate-600">{{ req.service_name }}</span>
-              </td>
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <div class="relative flex-shrink-0">
-                    <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${req.client_name}`" class="w-8 h-8 rounded-lg" />
-                    <span :class="['absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white',
-                      req.client_online ? 'bg-emerald-400' : 'bg-slate-300']"></span>
-                  </div>
-                  <span class="font-semibold text-[#0f172a]">{{ req.client_name }}</span>
+                <p class="font-semibold text-[#0f172a] text-[13px] mt-0.5">{{ req.service_name }}</p>
+              </div>
+              <span :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap flex-shrink-0', statusBadgeClass(req.status)]">
+                <span class="w-1.5 h-1.5 rounded-full bg-current opacity-80 flex-shrink-0"></span>
+                {{ statusLabel(req.status) }}
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-y-2 text-[12px]">
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Cliente</p>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  <span :class="['w-1.5 h-1.5 rounded-full flex-shrink-0', req.client_online ? 'bg-emerald-400' : 'bg-slate-300']"></span>
+                  <p class="font-semibold text-[#0f172a] truncate">{{ req.client_name }}</p>
                 </div>
-              </td>
-              <td class="px-4 py-3">
-                <div v-if="req.professional_name" class="flex items-center gap-2">
-                  <div class="relative flex-shrink-0">
-                    <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${req.professional_name}`" class="w-8 h-8 rounded-lg" />
-                    <span :class="['absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white',
-                      req.professional_online ? 'bg-emerald-400' : 'bg-slate-300']"></span>
-                  </div>
-                  <span class="font-semibold text-[#0f172a]">{{ req.professional_name }}</span>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Profesional</p>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  <span v-if="req.professional_name" :class="['w-1.5 h-1.5 rounded-full flex-shrink-0', req.professional_online ? 'bg-emerald-400' : 'bg-slate-300']"></span>
+                  <p class="font-semibold text-[#0f172a] truncate">{{ req.professional_name || 'Sin asignar' }}</p>
                 </div>
-                <span v-else class="text-[11px] text-slate-400">Sin asignar</span>
-              </td>
-              <td class="px-4 py-3">
-                <span :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap', statusBadgeClass(req.status)]">
-                  <span class="w-1.5 h-1.5 rounded-full bg-current opacity-80 flex-shrink-0"></span>
-                  {{ statusLabel(req.status) }}
-                </span>
-              </td>
-              <td class="px-4 py-3"><span class="text-[11px] text-slate-400">{{ req.created_at }}</span></td>
-              <td class="px-4 py-3"><span class="text-[11px] text-slate-400">{{ req.updated_at }}</span></td>
-              <td class="px-4 py-3">
-                <span :class="['inline-block px-2 py-0.5 rounded-md text-[11px] font-bold',
-                  isSlowElapsed(req.elapsed) ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700']">
-                  {{ req.elapsed }}
-                </span>
-              </td>
-              <td class="px-4 py-3">
-                <button @click="openDetail(req)"
-                  class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-[#0d4f5c]/10 hover:text-[#0d4f5c] transition">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                  </svg>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Tiempo</p>
+                <span :class="['text-[11px] font-bold', isSlowElapsed(req.elapsed) ? 'text-red-600' : 'text-emerald-700']">{{ req.elapsed }}</span>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Creado</p>
+                <p class="text-slate-500 text-[11px]">{{ req.created_at }}</p>
+              </div>
+            </div>
+            <div class="pt-2 border-t border-slate-50">
+              <button @click="openDetail(req)"
+                class="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-50 text-[#0d4f5c] text-[12px] font-semibold hover:bg-slate-100 transition">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Ver detalle
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Mobile pagination -->
+        <div v-if="reqMobileTotalPages > 1" class="md:hidden flex items-center justify-center gap-3 px-4 py-3 mt-1">
+          <button :disabled="reqMobilePage <= 1" @click="reqMobilePage--"
+            class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">‹</button>
+          <span class="text-[12px] text-slate-500 font-semibold">{{ reqMobilePage }} / {{ reqMobileTotalPages }}</span>
+          <button :disabled="reqMobilePage >= reqMobileTotalPages" @click="reqMobilePage++"
+            class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">›</button>
+        </div>
+        <!-- Desktop table (≥ md) -->
+        <div class="hidden md:block bg-white border border-slate-100 rounded-2xl overflow-auto">
+          <table class="w-full border-collapse text-[13px]">
+            <thead>
+              <tr>
+                <th v-for="h in ['ID','Servicio','Cliente','Profesional','Estado','Creado','Actualizado','Tiempo','Detalle']" :key="h"
+                  class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wide border-b border-slate-100 bg-slate-50 text-left whitespace-nowrap first:pl-5">
+                  {{ h }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="req in filteredRequests" :key="req.id" class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                <td class="px-4 py-3 pl-5 whitespace-nowrap">
+                  <span class="text-[12px] font-bold text-[#0d4f5c]">#{{ String(req.id).padStart(4,'0') }}</span>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="text-[12px] font-semibold text-slate-600">{{ req.service_name }}</span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <div class="relative flex-shrink-0">
+                      <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${req.client_name}`" class="w-8 h-8 rounded-lg" />
+                      <span :class="['absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white',
+                        req.client_online ? 'bg-emerald-400' : 'bg-slate-300']"></span>
+                    </div>
+                    <span class="font-semibold text-[#0f172a]">{{ req.client_name }}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-3">
+                  <div v-if="req.professional_name" class="flex items-center gap-2">
+                    <div class="relative flex-shrink-0">
+                      <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${req.professional_name}`" class="w-8 h-8 rounded-lg" />
+                      <span :class="['absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white',
+                        req.professional_online ? 'bg-emerald-400' : 'bg-slate-300']"></span>
+                    </div>
+                    <span class="font-semibold text-[#0f172a]">{{ req.professional_name }}</span>
+                  </div>
+                  <span v-else class="text-[11px] text-slate-400">Sin asignar</span>
+                </td>
+                <td class="px-4 py-3">
+                  <span :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap', statusBadgeClass(req.status)]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-current opacity-80 flex-shrink-0"></span>
+                    {{ statusLabel(req.status) }}
+                  </span>
+                </td>
+                <td class="px-4 py-3"><span class="text-[11px] text-slate-400">{{ req.created_at }}</span></td>
+                <td class="px-4 py-3"><span class="text-[11px] text-slate-400">{{ req.updated_at }}</span></td>
+                <td class="px-4 py-3">
+                  <span :class="['inline-block px-2 py-0.5 rounded-md text-[11px] font-bold',
+                    isSlowElapsed(req.elapsed) ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700']">
+                    {{ req.elapsed }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <button @click="openDetail(req)"
+                    class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-[#0d4f5c]/10 hover:text-[#0d4f5c] transition">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -176,7 +233,7 @@
           </div>
         </div>
       </div>
-      <div v-else class="grid grid-cols-2 gap-4">
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Clientes -->
         <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
           <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100">
@@ -267,53 +324,105 @@
         <p class="font-bold text-slate-500 text-sm">Sin chats activos</p>
         <p class="text-slate-400 text-xs mt-1">No hay conversaciones en las últimas 24 horas</p>
       </div>
-      <div v-else class="bg-white border border-slate-100 rounded-2xl overflow-auto">
-        <table class="w-full border-collapse text-[13px]">
-          <thead>
-            <tr>
-              <th v-for="h in ['Solicitud','Cliente','Profesional','Último mensaje','Hora','Mensajes','Estado']" :key="h"
-                class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wide border-b border-slate-100 bg-slate-50 text-left whitespace-nowrap first:pl-5">
-                {{ h }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="chat in filteredChats" :key="chat.request_id" class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
-              <td class="px-4 py-3 pl-5">
+      <div v-else>
+        <!-- Mobile cards (< md) -->
+        <div class="md:hidden space-y-3">
+          <div v-for="chat in chatMobilePagedItems" :key="chat.request_id" class="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div>
                 <span class="text-[12px] font-bold text-[#0d4f5c]">#{{ String(chat.request_id).padStart(4,'0') }}</span>
-              </td>
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.client_name}`" class="w-7 h-7 rounded-lg flex-shrink-0" />
-                  <span class="font-semibold text-[#0f172a]">{{ chat.client_name }}</span>
+                <p class="text-[11px] text-slate-400 mt-0.5">{{ chat.last_message_time }}</p>
+              </div>
+              <span :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap flex-shrink-0', statusBadgeClass(chat.status)]">
+                <span class="w-1.5 h-1.5 rounded-full bg-current opacity-80 flex-shrink-0"></span>
+                {{ statusLabel(chat.status) }}
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-y-2 text-[12px]">
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Cliente</p>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.client_name}`" class="w-5 h-5 rounded-md flex-shrink-0" />
+                  <p class="font-semibold text-[#0f172a] truncate">{{ chat.client_name }}</p>
                 </div>
-              </td>
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.professional_name}`" class="w-7 h-7 rounded-lg flex-shrink-0" />
-                  <span class="font-semibold text-[#0f172a]">{{ chat.professional_name }}</span>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Profesional</p>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.professional_name}`" class="w-5 h-5 rounded-md flex-shrink-0" />
+                  <p class="font-semibold text-[#0f172a] truncate">{{ chat.professional_name }}</p>
                 </div>
-              </td>
-              <td class="px-4 py-3 max-w-[180px]">
-                <p class="text-[10px] font-bold text-slate-400">{{ chat.sender_name }}:</p>
-                <p class="text-[12px] text-slate-600 truncate">{{ truncate(chat.last_message, 40) }}</p>
-              </td>
-              <td class="px-4 py-3"><span class="text-[11px] text-slate-400">{{ chat.last_message_time }}</span></td>
-              <td class="px-4 py-3">
-                <button @click="openChatViewer(chat)"
-                  class="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-slate-100 text-slate-600 text-[12px] font-bold hover:bg-[#0d4f5c]/10 hover:text-[#0d4f5c] transition">
-                  {{ chat.total_messages }}
-                </button>
-              </td>
-              <td class="px-4 py-3">
-                <span :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap', statusBadgeClass(chat.status)]">
-                  <span class="w-1.5 h-1.5 rounded-full bg-current opacity-80 flex-shrink-0"></span>
-                  {{ statusLabel(chat.status) }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+              <div class="col-span-2">
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Último mensaje</p>
+                <p class="text-[11px] text-slate-600 truncate mt-0.5">{{ chat.sender_name }}: {{ truncate(chat.last_message, 50) }}</p>
+              </div>
+            </div>
+            <div class="pt-2 border-t border-slate-50">
+              <button @click="openChatViewer(chat)"
+                class="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-50 text-[#0d4f5c] text-[12px] font-semibold hover:bg-slate-100 transition">
+                💬 Ver {{ chat.total_messages }} mensajes
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Mobile pagination -->
+        <div v-if="chatMobileTotalPages > 1" class="md:hidden flex items-center justify-center gap-3 px-4 py-3 mt-1">
+          <button :disabled="chatMobilePage <= 1" @click="chatMobilePage--"
+            class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">‹</button>
+          <span class="text-[12px] text-slate-500 font-semibold">{{ chatMobilePage }} / {{ chatMobileTotalPages }}</span>
+          <button :disabled="chatMobilePage >= chatMobileTotalPages" @click="chatMobilePage++"
+            class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">›</button>
+        </div>
+        <!-- Desktop table (≥ md) -->
+        <div class="hidden md:block bg-white border border-slate-100 rounded-2xl overflow-auto">
+          <table class="w-full border-collapse text-[13px]">
+            <thead>
+              <tr>
+                <th v-for="h in ['Solicitud','Cliente','Profesional','Último mensaje','Hora','Mensajes','Estado']" :key="h"
+                  class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wide border-b border-slate-100 bg-slate-50 text-left whitespace-nowrap first:pl-5">
+                  {{ h }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="chat in filteredChats" :key="chat.request_id" class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                <td class="px-4 py-3 pl-5">
+                  <span class="text-[12px] font-bold text-[#0d4f5c]">#{{ String(chat.request_id).padStart(4,'0') }}</span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.client_name}`" class="w-7 h-7 rounded-lg flex-shrink-0" />
+                    <span class="font-semibold text-[#0f172a]">{{ chat.client_name }}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.professional_name}`" class="w-7 h-7 rounded-lg flex-shrink-0" />
+                    <span class="font-semibold text-[#0f172a]">{{ chat.professional_name }}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-3 max-w-[180px]">
+                  <p class="text-[10px] font-bold text-slate-400">{{ chat.sender_name }}:</p>
+                  <p class="text-[12px] text-slate-600 truncate">{{ truncate(chat.last_message, 40) }}</p>
+                </td>
+                <td class="px-4 py-3"><span class="text-[11px] text-slate-400">{{ chat.last_message_time }}</span></td>
+                <td class="px-4 py-3">
+                  <button @click="openChatViewer(chat)"
+                    class="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-slate-100 text-slate-600 text-[12px] font-bold hover:bg-[#0d4f5c]/10 hover:text-[#0d4f5c] transition">
+                    {{ chat.total_messages }}
+                  </button>
+                </td>
+                <td class="px-4 py-3">
+                  <span :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap', statusBadgeClass(chat.status)]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-current opacity-80 flex-shrink-0"></span>
+                    {{ statusLabel(chat.status) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -644,7 +753,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import api from '@/services/api'
 
 const POLL_INTERVAL = 10000
@@ -779,6 +888,25 @@ const filteredIncidents = computed(() => {
     i.service_name.toLowerCase().includes(q)
   )
 })
+
+const REQ_MOBILE_PG = 5
+const reqMobilePage = ref(1)
+const reqMobilePagedItems = computed(() => {
+  const start = (reqMobilePage.value - 1) * REQ_MOBILE_PG
+  return filteredRequests.value.slice(start, start + REQ_MOBILE_PG)
+})
+const reqMobileTotalPages = computed(() => Math.ceil(filteredRequests.value.length / REQ_MOBILE_PG))
+
+const CHAT_MOBILE_PG = 5
+const chatMobilePage = ref(1)
+const chatMobilePagedItems = computed(() => {
+  const start = (chatMobilePage.value - 1) * CHAT_MOBILE_PG
+  return filteredChats.value.slice(start, start + CHAT_MOBILE_PG)
+})
+const chatMobileTotalPages = computed(() => Math.ceil(filteredChats.value.length / CHAT_MOBILE_PG))
+
+watch([search, statusFilter], () => { reqMobilePage.value = 1 })
+watch(search, () => { chatMobilePage.value = 1 })
 
 // API calls
 const fetchSummary = async () => {

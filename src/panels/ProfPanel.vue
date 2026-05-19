@@ -27,19 +27,13 @@
       <!-- Header -->
       <div class="flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-3 md:px-8 md:pt-7 md:pb-5 border-b border-slate-100">
         <div class="flex items-center gap-3">
-          <!-- Hamburger (mobile only) -->
-          <button @click="mobileSidebarOpen = true" class="md:hidden w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center hover:bg-slate-100 transition flex-shrink-0">
-            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/>
-            </svg>
-          </button>
           <div>
             <h2 class="text-lg md:text-xl font-black text-[#0f172a]">{{ page === 'Inicio' ? `¡Hola, ${firstName}! 👋` : page }}</h2>
             <p class="text-[12px] md:text-[13px] text-slate-400 mt-0.5">{{ page === 'Inicio' ? 'Bienvenido a tu panel profesional' : today }}</p>
           </div>
         </div>
         <div class="flex items-center gap-2.5">
-          <button v-if="page === 'Inicio'" @click="openSvcModal(null)" class="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[13px] font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition shadow-sm">
+          <button v-if="page === 'Inicio'" @click="openSvcModal(null)" class="hidden md:flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[13px] font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition shadow-sm">
             Publicar servicio
             <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
           </button>
@@ -102,11 +96,26 @@
               {{ totalUnreadMessages > 9 ? '9+' : totalUnreadMessages }}
             </span>
           </button>
+          <!-- Cerrar sesión (solo mobile) -->
+          <button @click="emit('logout')" title="Cerrar sesión"
+            class="md:hidden w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center hover:bg-red-100 transition flex-shrink-0">
+            <svg viewBox="0 0 24 24" class="w-[17px] h-[17px] text-red-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+            </svg>
+          </button>
         </div>
       </div>
 
+      <!-- Publicar servicio — solo mobile, debajo del header -->
+      <div v-if="page === 'Inicio'" class="md:hidden flex-shrink-0 px-4 py-2.5 border-b border-slate-100">
+        <button @click="openSvcModal(null)" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[13px] font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition shadow-sm">
+          Publicar servicio
+          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+        </button>
+      </div>
+
       <!-- Content -->
-      <div class="flex-1 overflow-y-auto px-4 pb-6 md:px-8 md:pb-8 space-y-6 pt-4 md:pt-6">
+      <div class="flex-1 overflow-y-auto px-4 pb-20 md:px-8 md:pb-8 space-y-6 pt-4 md:pt-6">
 
         <!-- ===== INICIO ===== -->
         <template v-if="page === 'Inicio'">
@@ -459,95 +468,96 @@
             </div>
           </div>
 
-          <!-- Modal detalle de cita -->
+          <!-- Modal: servicios del día (cards + scroll) -->
           <Teleport to="body">
             <Transition name="modal">
-              <div v-if="calModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+              <div v-if="calModalOpen" class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
                 style="background:rgba(15,23,42,.6)" @click.self="calModalOpen = false">
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+                <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg flex flex-col overflow-hidden"
+                  style="max-height:88vh">
 
-                  <!-- Header modal -->
-                  <div class="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700">
+                  <!-- Header -->
+                  <div class="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 flex-shrink-0 rounded-t-3xl sm:rounded-t-2xl">
                     <div>
-                      <p class="text-white font-black text-[15px]">Detalle del servicio #{{ calModalJob?.id }}</p>
-                      <p class="text-blue-200 text-[12px] mt-0.5">{{ calModalDate }}</p>
+                      <p class="text-white font-black text-[15px] capitalize">{{ calModalDate }}</p>
+                      <p class="text-blue-200 text-[12px] mt-0.5">
+                        {{ calDayJobs(calModalDateStr).length }} servicio(s) agendado(s)
+                      </p>
                     </div>
                     <button @click="calModalOpen = false"
                       class="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 transition text-sm">✕</button>
                   </div>
 
-                  <!-- Body -->
-                  <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                    <!-- Status pill -->
-                    <div class="flex items-center gap-2">
-                      <span class="px-3 py-1 rounded-full text-[11px] font-bold"
-                        :class="calModalJob?.status === 'completed'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-blue-100 text-blue-700'">
-                        {{ calModalJob?.status === 'completed' ? 'Completado' : 'En curso' }}
-                      </span>
-                      <span class="text-[12px] text-slate-400">{{ calModalJob?.service_name }}</span>
-                    </div>
+                  <!-- Scrollable cards -->
+                  <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div v-for="job in calDayJobs(calModalDateStr)" :key="job.id"
+                      class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
 
-                    <!-- Info grid -->
-                    <div class="grid grid-cols-2 gap-3">
-                      <div class="cal-info-card">
-                        <span class="cal-info-label">👤 Cliente</span>
-                        <p class="cal-info-val">{{ calModalJob?.client_name }}</p>
+                      <!-- Card top: id + status -->
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-[11px] font-mono font-bold text-[#0d4f5c] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">
+                          #{{ String(job.id).padStart(4,'0') }}
+                        </span>
+                        <span class="px-2.5 py-1 rounded-full text-[11px] font-bold"
+                          :class="job.status === 'completed'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-blue-100 text-blue-700'">
+                          {{ job.status === 'completed' ? 'Completado' : 'En curso' }}
+                        </span>
                       </div>
-                      <div class="cal-info-card">
-                        <span class="cal-info-label">⏰ Hora</span>
-                        <p class="cal-info-val">{{ calModalJob?.service_time }}</p>
-                      </div>
-                      <div v-if="calModalJob?.address" class="cal-info-card col-span-2">
-                        <span class="cal-info-label">📍 Dirección</span>
-                        <p class="cal-info-val">{{ calModalJob.address }}</p>
-                      </div>
-                      <div v-if="calModalJob?.city_name" class="cal-info-card">
-                        <span class="cal-info-label">🏙 Ciudad</span>
-                        <p class="cal-info-val">{{ calModalJob.city_name }}</p>
-                      </div>
-                      <div class="cal-info-card">
-                        <span class="cal-info-label">💰 Presupuesto</span>
-                        <p class="cal-info-val font-black text-emerald-600">${{ Number(calModalJob?.budget ?? 0).toLocaleString('es-CO') }}</p>
-                      </div>
-                      <div v-if="calModalJob?.people_count" class="cal-info-card">
-                        <span class="cal-info-label">👥 Personas</span>
-                        <p class="cal-info-val">{{ calModalJob.people_count }}</p>
-                      </div>
-                      <div v-if="calModalJob?.company_name" class="cal-info-card col-span-2">
-                        <span class="cal-info-label">🏢 Empresa</span>
-                        <p class="cal-info-val">{{ calModalJob.company_name }}</p>
-                      </div>
-                      <div v-if="calModalJob?.description" class="cal-info-card col-span-2">
-                        <span class="cal-info-label">📝 Descripción</span>
-                        <p class="cal-info-val">{{ calModalJob.description }}</p>
-                      </div>
-                    </div>
 
-                    <!-- Si hay múltiples servicios ese día -->
-                    <div v-if="calDayJobs(calModalDateStr).length > 1" class="pt-2 border-t border-slate-100">
-                      <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">Otros servicios ese día</p>
-                      <div class="space-y-1">
-                        <button v-for="j in calDayJobs(calModalDateStr).filter(j => j.id !== calModalJob?.id)" :key="j.id"
-                          @click="calModalJob = j"
-                          class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-blue-50 transition text-[13px]">
-                          <span class="font-semibold text-[#0f172a]">servicio#{{ j.id }} — {{ j.service_name }}</span>
-                          <span class="text-slate-400">{{ j.service_time }}</span>
-                        </button>
+                      <!-- Service name -->
+                      <p class="font-black text-[#0f172a] text-[14px] leading-snug">{{ job.service_name }}</p>
+
+                      <!-- Info grid -->
+                      <div class="grid grid-cols-2 gap-2">
+                        <div class="cal-info-card">
+                          <span class="cal-info-label">👤 Cliente</span>
+                          <p class="cal-info-val">{{ job.client_name }}</p>
+                        </div>
+                        <div class="cal-info-card">
+                          <span class="cal-info-label">⏰ Hora</span>
+                          <p class="cal-info-val">{{ job.service_time }}</p>
+                        </div>
+                        <div class="cal-info-card">
+                          <span class="cal-info-label">💰 Presupuesto</span>
+                          <p class="cal-info-val font-black text-emerald-600">${{ Number(job.budget ?? 0).toLocaleString('es-CO') }}</p>
+                        </div>
+                        <div v-if="job.people_count" class="cal-info-card">
+                          <span class="cal-info-label">👥 Personas</span>
+                          <p class="cal-info-val">{{ job.people_count }}</p>
+                        </div>
+                        <div v-if="job.address" class="cal-info-card col-span-2">
+                          <span class="cal-info-label">📍 Dirección</span>
+                          <p class="cal-info-val">{{ job.address }}</p>
+                        </div>
+                        <div v-if="job.city_name" class="cal-info-card">
+                          <span class="cal-info-label">🏙 Ciudad</span>
+                          <p class="cal-info-val">{{ job.city_name }}</p>
+                        </div>
+                        <div v-if="job.company_name" class="cal-info-card col-span-2">
+                          <span class="cal-info-label">🏢 Empresa</span>
+                          <p class="cal-info-val">{{ job.company_name }}</p>
+                        </div>
+                        <div v-if="job.description" class="cal-info-card col-span-2">
+                          <span class="cal-info-label">📝 Descripción</span>
+                          <p class="cal-info-val">{{ job.description }}</p>
+                        </div>
                       </div>
+
+                      <!-- Action -->
+                      <button @click="page = 'Mis Trabajos'; calModalOpen = false"
+                        class="w-full py-2 rounded-xl bg-white border border-blue-200 text-[12px] font-semibold text-blue-700 hover:bg-blue-50 transition">
+                        Ver en Mis Trabajos →
+                      </button>
                     </div>
                   </div>
 
                   <!-- Footer -->
-                  <div class="px-6 py-4 border-t border-slate-100 flex gap-3">
+                  <div class="px-5 py-3 border-t border-slate-100 flex-shrink-0">
                     <button @click="calModalOpen = false"
-                      class="flex-1 border border-slate-200 text-slate-600 text-[13px] font-semibold py-2.5 rounded-xl hover:bg-slate-50 transition">
+                      class="w-full border border-slate-200 text-slate-600 text-[13px] font-semibold py-2.5 rounded-xl hover:bg-slate-50 transition">
                       Cerrar
-                    </button>
-                    <button @click="page = 'Mis Trabajos'; calModalOpen = false"
-                      class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-[13px] font-semibold py-2.5 rounded-xl hover:opacity-90 transition">
-                      Ver en Mis Trabajos
                     </button>
                   </div>
                 </div>
@@ -569,20 +579,54 @@
               <span class="font-black text-[#0f172a]">Historial de ingresos</span>
               <button class="text-[13px] font-semibold text-[#2563ff] border border-blue-200 px-4 py-1.5 rounded-xl hover:bg-blue-50 transition">Descargar</button>
             </div>
-            <table class="w-full text-sm">
-              <thead class="bg-slate-50">
-                <tr><th v-for="h in ['Servicio','Cliente','Fecha','Monto','Estado']" :key="h" class="text-left px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th></tr>
-              </thead>
-              <tbody class="divide-y divide-slate-50">
-                <tr v-for="p in incomeHistory" :key="p.id" class="hover:bg-slate-50 transition">
-                  <td class="px-6 py-4 font-semibold text-[#0f172a] text-[13px]">{{ p.service }}</td>
-                  <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.client }}</td>
-                  <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.date }}</td>
-                  <td class="px-6 py-4 font-black text-emerald-600 text-[13px]">{{ p.amount }}</td>
-                  <td class="px-6 py-4"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">Cobrado</span></td>
-                </tr>
-              </tbody>
-            </table>
+            <!-- Mobile cards (< md) -->
+            <div class="md:hidden divide-y divide-slate-50">
+              <div v-for="p in incomeMobilePagedItems" :key="p.id" class="p-4 space-y-2">
+                <div class="flex items-start justify-between gap-2">
+                  <p class="font-semibold text-[#0f172a] text-[13px]">{{ p.service }}</p>
+                  <span class="bg-emerald-100 text-emerald-700 text-[11px] font-bold px-2.5 py-1 rounded-full flex-shrink-0">Cobrado</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[12px]">
+                  <div>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Cliente</p>
+                    <p class="text-slate-600 mt-0.5">{{ p.client }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Fecha</p>
+                    <p class="text-slate-500 mt-0.5">{{ p.date }}</p>
+                  </div>
+                  <div class="col-span-2">
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Monto</p>
+                    <p class="font-black text-emerald-600 mt-0.5">{{ p.amount }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Mobile pagination -->
+            <div v-if="incomeMobileTotalPages > 1" class="md:hidden flex items-center justify-center gap-3 px-4 py-3 border-t border-slate-100">
+              <button :disabled="incomeMobilePage <= 1" @click="incomeMobilePage--"
+                class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">‹</button>
+              <span class="text-[12px] text-slate-500 font-semibold">{{ incomeMobilePage }} / {{ incomeMobileTotalPages }}</span>
+              <button :disabled="incomeMobilePage >= incomeMobileTotalPages" @click="incomeMobilePage++"
+                class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">›</button>
+            </div>
+            <!-- Desktop table (≥ md) -->
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-sm min-w-[500px]">
+                <thead class="bg-slate-50">
+                  <tr><th v-for="h in ['Servicio','Cliente','Fecha','Monto','Estado']" :key="h" class="text-left px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                  <tr v-for="p in incomeHistory" :key="p.id" class="hover:bg-slate-50 transition">
+                    <td class="px-6 py-4 font-semibold text-[#0f172a] text-[13px]">{{ p.service }}</td>
+                    <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.client }}</td>
+                    <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.date }}</td>
+                    <td class="px-6 py-4 font-black text-emerald-600 text-[13px]">{{ p.amount }}</td>
+                    <td class="px-6 py-4"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">Cobrado</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </template>
 
@@ -590,7 +634,7 @@
         <template v-else-if="page === 'Estadísticas'">
 
           <!-- Summary cards -->
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="bg-white border border-slate-100 rounded-2xl p-5">
               <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Total ganado (neto)</p>
               <p class="text-[22px] font-black text-emerald-600 mt-1.5">{{ statsTotalEarned }}</p>
@@ -677,7 +721,7 @@
             <div class="md:col-span-2 space-y-5">
               <div class="bg-white border border-slate-100 rounded-2xl p-6 space-y-4">
                 <h3 class="font-black text-[#0f172a]">Perfil profesional</h3>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Nombre</label>
                     <input v-model="profForm.name" type="text" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition bg-slate-50 focus:bg-white" />
@@ -1034,10 +1078,27 @@
         </template>
 
       </div>
+
+      <!-- Mobile Bottom Tab Bar — todos los menús con scroll horizontal -->
+      <nav class="md:hidden flex-shrink-0 bg-white border-t border-slate-100" style="padding-bottom:env(safe-area-inset-bottom,0px)">
+        <div class="flex overflow-x-auto" style="scrollbar-width:none;-ms-overflow-style:none">
+          <button v-for="item in navItems.filter(i => !i.divider)" :key="item.name"
+            @click="page = item.name"
+            :class="['flex-shrink-0 flex flex-col items-center gap-0.5 pt-2 pb-1.5 px-3 min-w-[62px] transition-colors',
+              page === item.name ? 'text-[#7c3aed]' : 'text-slate-400']">
+            <div :class="['relative w-10 h-8 rounded-xl flex items-center justify-center transition-colors',
+              page === item.name ? 'bg-purple-50' : '']">
+              <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" v-html="item.iconSvg"/>
+              <span v-if="item.badge" class="absolute -top-1 -right-1 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center leading-none">{{ item.badge > 9 ? '9+' : item.badge }}</span>
+            </div>
+            <span class="text-[10px] font-bold whitespace-nowrap">{{ item.label ?? item.name }}</span>
+          </button>
+        </div>
+      </nav>
     </div>
 
-    <!-- Right panel (Inicio only) -->
-    <div v-if="page === 'Inicio'" class="w-64 flex-shrink-0 overflow-y-auto space-y-3">
+    <!-- Right panel (Inicio only) — hidden on mobile/tablet, visible xl+ -->
+    <div v-if="page === 'Inicio'" class="hidden xl:block w-64 flex-shrink-0 overflow-y-auto space-y-3">
 
       <!-- Profile card -->
       <div class="bg-white rounded-2xl shadow-sm p-5">
@@ -1352,6 +1413,18 @@
   border-radius: 6px; padding: 4px 6px;
   font-size: 11px; color: #fff; line-height: 1.3;
   overflow: hidden;
+}
+
+/* Calendario responsive: ocultar chips, mostrar solo punto azul en móvil */
+@media (max-width: 767px) {
+  .cal-cell { min-height: 48px; padding: 3px 2px; border-radius: 6px; }
+  .cal-event-list { display: none !important; }
+  .cal-cell-event::before {
+    content: ''; display: block; width: 7px; height: 7px;
+    border-radius: 50%; background: rgba(255,255,255,.9);
+    margin: 4px auto 2px; flex-shrink: 0;
+  }
+  .cal-day-number { font-size: 10px; }
 }
 
 /* Modal calendario */
@@ -1928,18 +2001,18 @@ const profAvgRating   = ref(0)
 const profReviewCount = ref(0)
 
 const navItems = computed(() => [
-  { name:'Inicio',              iconSvg: SVG.home  },
-  { name:'Perfil profesional',  iconSvg: SVG.prof  },
-  { name:'Mis servicios',       iconSvg: SVG.svc   },
-  { name:'Mis Trabajos',        iconSvg: SVG.cal,  badge: totalUnreadMessages.value || undefined },
-  { name:'Calendario',          iconSvg: SVG.calDot },
+  { name:'Inicio',              label:'Inicio',    iconSvg: SVG.home   },
+  { name:'Perfil profesional',  label:'Perfil',    iconSvg: SVG.prof   },
+  { name:'Mis servicios',       label:'Servicios', iconSvg: SVG.svc    },
+  { name:'Mis Trabajos',        label:'Trabajos',  iconSvg: SVG.cal,   badge: totalUnreadMessages.value || undefined },
+  { name:'Calendario',          label:'Calendario',iconSvg: SVG.calDot },
   { divider: true },
-  { name:'Mis ingresos',        iconSvg: SVG.money },
-  { name:'Datos de pago',       iconSvg: SVG.card ?? `<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>` },
-  { name:'Estadísticas',        iconSvg: SVG.chart },
+  { name:'Mis ingresos',        label:'Ingresos',  iconSvg: SVG.money  },
+  { name:'Datos de pago',       label:'D. Pago',   iconSvg: SVG.card ?? `<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>` },
+  { name:'Estadísticas',        label:'Stats',     iconSvg: SVG.chart  },
   { divider: true },
-  { name:'Configuración',       iconSvg: SVG.set   },
-  { name:'Ayuda',               iconSvg: SVG.help  },
+  { name:'Configuración',       label:'Ajustes',   iconSvg: SVG.set    },
+  { name:'Ayuda',               label:'Ayuda',     iconSvg: SVG.help   },
 ])
 
 const stats = reactive([
@@ -2470,6 +2543,14 @@ const incomeHistory = reactive([
   { id:3, service:'Clases personalizadas', client:'Camilo P.', date:'10 May 2026', amount:'$120.000' },
   { id:4, service:'Plomería',              client:'Ana T.',    date:'08 May 2026', amount:'$90.000'  },
 ])
+
+const INCOME_MOBILE_PG = 5
+const incomeMobilePage = ref(1)
+const incomeMobilePagedItems = computed(() => {
+  const start = (incomeMobilePage.value - 1) * INCOME_MOBILE_PG
+  return incomeHistory.slice(start, start + INCOME_MOBILE_PG)
+})
+const incomeMobileTotalPages = computed(() => Math.ceil(incomeHistory.length / INCOME_MOBILE_PG))
 
 // ─── Estadísticas ─────────────────────────────────────────────────────────────
 // Helpers de formato y escala

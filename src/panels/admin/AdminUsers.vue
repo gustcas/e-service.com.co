@@ -30,7 +30,7 @@
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div v-for="s in statsRow" :key="s.label"
         class="bg-white border border-slate-100 rounded-2xl p-5 flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0">
@@ -111,101 +111,171 @@
       <button @click="clearFilters" class="mt-3 text-[12px] text-[#0d4f5c] font-bold hover:underline">Limpiar filtros</button>
     </div>
 
-    <!-- Table -->
-    <div v-else class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50">
-          <tr>
-            <th class="px-4 py-3 w-10">
-              <input type="checkbox" :checked="allSelected" @change="toggleSelectAll" class="rounded accent-[#0d4f5c]" />
-            </th>
-            <th @click="setSort('name')" class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-slate-600">
-              Usuario {{ sortIcon('name') }}
-            </th>
-            <th @click="setSort('email')" class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-slate-600">
-              Email {{ sortIcon('email') }}
-            </th>
-            <th class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Especialidad</th>
-            <th class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Rol</th>
-            <th class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Estado</th>
-            <th @click="setSort('created_at')" class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-slate-600">
-              Registrado {{ sortIcon('created_at') }}
-            </th>
-            <th class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Acciones</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-50">
-          <tr v-for="u in users" :key="u.id" :class="['hover:bg-slate-50 transition', selectedIds.includes(u.id) ? 'bg-blue-50/50' : '']">
-            <td class="px-4 py-3">
-              <input type="checkbox" :checked="selectedIds.includes(u.id)" @change="toggleSelect(u.id)" class="rounded accent-[#0d4f5c]" />
-            </td>
-            <!-- Usuario -->
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2.5">
-                <div class="relative flex-shrink-0">
-                  <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`" class="w-9 h-9 rounded-xl border border-slate-200" :alt="u.name" />
-                  <span :class="['absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white', u.email_verified_at ? 'bg-emerald-500' : 'bg-slate-300']"></span>
-                </div>
-                <div>
-                  <p class="font-bold text-[#0f172a] text-[13px] leading-tight">{{ u.name }}</p>
-                  <p class="text-[10px] text-slate-400">#{{ String(u.id).padStart(4, '0') }}</p>
-                </div>
+    <!-- Cards mobile / Table desktop -->
+    <div v-else>
+
+      <!-- Mobile cards (< md) -->
+      <div class="md:hidden space-y-3">
+        <div v-for="u in users" :key="u.id"
+          class="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
+          <!-- top row -->
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <div class="relative flex-shrink-0">
+                <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`" class="w-11 h-11 rounded-xl border border-slate-200" :alt="u.name" />
+                <span :class="['absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white', u.email_verified_at ? 'bg-emerald-500' : 'bg-slate-300']"></span>
               </div>
-            </td>
-            <!-- Email -->
-            <td class="px-4 py-3 text-[12px] text-slate-500">{{ u.email }}</td>
-            <!-- Especialidad -->
-            <td class="px-4 py-3">
-              <template v-if="u.role === 'professional'">
+              <div>
+                <p class="font-bold text-[#0f172a] text-[13px] leading-tight">{{ u.name }}</p>
+                <p class="text-[10px] text-slate-400">#{{ String(u.id).padStart(4, '0') }}</p>
+              </div>
+            </div>
+            <span :class="['inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0',
+              u.role === 'professional' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700']">
+              {{ u.role === 'professional' ? '💼 Prof.' : '👤 Cliente' }}
+            </span>
+          </div>
+          <!-- info grid -->
+          <div class="grid grid-cols-2 gap-y-2.5 text-[12px]">
+            <div class="col-span-2">
+              <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Email</p>
+              <p class="text-slate-600 truncate">{{ u.email }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Estado</p>
+              <span :class="['inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full mt-0.5',
+                u.role === 'professional'
+                  ? (u.professional?.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')
+                  : 'bg-slate-100 text-slate-500']">
+                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                {{ u.role === 'professional' ? (u.professional?.status === 'approved' ? 'Aprobado' : 'Pendiente') : '—' }}
+              </span>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Registrado</p>
+              <p class="text-[#0f172a]">{{ formatDate(u.created_at) }}</p>
+            </div>
+            <div v-if="u.role === 'professional'" class="col-span-2">
+              <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Especialidad</p>
+              <div class="flex flex-wrap gap-1 mt-0.5">
                 <template v-if="u.professional?.categories?.length">
                   <span v-for="cat in u.professional.categories" :key="cat.id"
-                    class="inline-block bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-0.5 rounded-md mr-1">{{ cat.name }}</span>
+                    class="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-0.5 rounded-md">{{ cat.name }}</span>
                 </template>
                 <span v-else class="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-0.5 rounded-md">
                   {{ u.professional?.category?.name || '—' }}
                 </span>
-              </template>
-              <span v-else class="text-[11px] text-slate-400">No aplica</span>
-            </td>
-            <!-- Rol -->
-            <td class="px-4 py-3">
-              <span :class="['inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full',
-                u.role === 'professional' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700']">
-                {{ u.role === 'professional' ? '💼 Profesional' : '👤 Cliente' }}
-              </span>
-            </td>
-            <!-- Estado -->
-            <td class="px-4 py-3">
-              <span :class="['inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full',
-                u.role === 'professional'
-                  ? (u.professional?.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')
-                  : 'bg-slate-100 text-slate-500']">
-                <span class="w-1.5 h-1.5 rounded-full bg-current flex-shrink-0"></span>
-                {{ u.role === 'professional' ? (u.professional?.status === 'approved' ? 'Aprobado' : 'Pendiente') : 'No requerido' }}
-              </span>
-            </td>
-            <!-- Registrado -->
-            <td class="px-4 py-3">
-              <p class="text-[12px] text-[#0f172a]">{{ formatDate(u.created_at) }}</p>
-              <p class="text-[10px] text-slate-400">{{ timeAgo(u.created_at) }}</p>
-            </td>
-            <!-- Acciones -->
-            <td class="px-4 py-3">
-              <div class="flex gap-1.5">
-                <button @click="openDetail(u)" title="Ver detalle"
-                  class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition">
-                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-                <button v-if="u.role === 'professional' && u.professional?.status !== 'approved'"
-                  @click="verifyProfessional(u)" :disabled="verifyingId === u.id"
-                  title="Verificar profesional" class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 flex items-center justify-center transition disabled:opacity-50">
-                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                </button>
               </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+          </div>
+          <!-- actions -->
+          <div class="flex gap-2 pt-2 border-t border-slate-50">
+            <button @click="openDetail(u)"
+              class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-100 text-slate-600 text-[12px] font-semibold hover:bg-slate-200 transition">
+              <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Ver
+            </button>
+            <button v-if="u.role === 'professional' && u.professional?.status !== 'approved'"
+              @click="verifyProfessional(u)" :disabled="verifyingId === u.id"
+              class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-[12px] font-semibold hover:bg-emerald-100 transition disabled:opacity-50">
+              ✓ Verificar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop table (≥ md) -->
+      <div class="hidden md:block bg-white border border-slate-100 rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[640px]">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 w-10">
+                <input type="checkbox" :checked="allSelected" @change="toggleSelectAll" class="rounded accent-[#0d4f5c]" />
+              </th>
+              <th @click="setSort('name')" class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-slate-600">
+                Usuario {{ sortIcon('name') }}
+              </th>
+              <th @click="setSort('email')" class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-slate-600">
+                Email {{ sortIcon('email') }}
+              </th>
+              <th class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Especialidad</th>
+              <th class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Rol</th>
+              <th class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Estado</th>
+              <th @click="setSort('created_at')" class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-slate-600">
+                Registrado {{ sortIcon('created_at') }}
+              </th>
+              <th class="text-left px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            <tr v-for="u in users" :key="u.id" :class="['hover:bg-slate-50 transition', selectedIds.includes(u.id) ? 'bg-blue-50/50' : '']">
+              <td class="px-4 py-3">
+                <input type="checkbox" :checked="selectedIds.includes(u.id)" @change="toggleSelect(u.id)" class="rounded accent-[#0d4f5c]" />
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="relative flex-shrink-0">
+                    <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`" class="w-9 h-9 rounded-xl border border-slate-200" :alt="u.name" />
+                    <span :class="['absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white', u.email_verified_at ? 'bg-emerald-500' : 'bg-slate-300']"></span>
+                  </div>
+                  <div>
+                    <p class="font-bold text-[#0f172a] text-[13px] leading-tight">{{ u.name }}</p>
+                    <p class="text-[10px] text-slate-400">#{{ String(u.id).padStart(4, '0') }}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-[12px] text-slate-500">{{ u.email }}</td>
+              <td class="px-4 py-3">
+                <template v-if="u.role === 'professional'">
+                  <template v-if="u.professional?.categories?.length">
+                    <span v-for="cat in u.professional.categories" :key="cat.id"
+                      class="inline-block bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-0.5 rounded-md mr-1">{{ cat.name }}</span>
+                  </template>
+                  <span v-else class="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                    {{ u.professional?.category?.name || '—' }}
+                  </span>
+                </template>
+                <span v-else class="text-[11px] text-slate-400">No aplica</span>
+              </td>
+              <td class="px-4 py-3">
+                <span :class="['inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full',
+                  u.role === 'professional' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700']">
+                  {{ u.role === 'professional' ? '💼 Profesional' : '👤 Cliente' }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <span :class="['inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full',
+                  u.role === 'professional'
+                    ? (u.professional?.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')
+                    : 'bg-slate-100 text-slate-500']">
+                  <span class="w-1.5 h-1.5 rounded-full bg-current flex-shrink-0"></span>
+                  {{ u.role === 'professional' ? (u.professional?.status === 'approved' ? 'Aprobado' : 'Pendiente') : 'No requerido' }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <p class="text-[12px] text-[#0f172a]">{{ formatDate(u.created_at) }}</p>
+                <p class="text-[10px] text-slate-400">{{ timeAgo(u.created_at) }}</p>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex gap-1.5">
+                  <button @click="openDetail(u)" title="Ver detalle"
+                    class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition">
+                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                  <button v-if="u.role === 'professional' && u.professional?.status !== 'approved'"
+                    @click="verifyProfessional(u)" :disabled="verifyingId === u.id"
+                    title="Verificar profesional" class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 flex items-center justify-center transition disabled:opacity-50">
+                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
     </div>
 
     <!-- Bulk bar -->

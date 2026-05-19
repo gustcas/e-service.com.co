@@ -16,7 +16,7 @@
     </div>
 
     <!-- Stat cards -->
-    <div class="grid grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
       <div v-for="s in statCards" :key="s.label"
         class="bg-white border border-slate-100 rounded-2xl p-5 flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0">
@@ -80,9 +80,50 @@
       <p class="text-sm">No hay solicitudes que coincidan con los filtros</p>
     </div>
 
-    <!-- Tabla -->
+    <!-- Tabla / Cards -->
     <div v-else class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-      <table class="w-full border-collapse text-[13px]">
+
+      <!-- Mobile cards (< md) -->
+      <div class="md:hidden divide-y divide-slate-50">
+        <div v-for="t in tickets" :key="t.id" class="p-4 space-y-3">
+          <div class="flex items-start gap-2.5">
+            <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${t.user?.name}`"
+              class="w-9 h-9 rounded-xl border border-slate-100 flex-shrink-0 mt-0.5" />
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2">
+                <p class="font-bold text-[#0f172a] text-[13px] truncate">{{ t.user?.name ?? '—' }}</p>
+                <span :class="['px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide flex-shrink-0', statusBadge(t.status)]">
+                  {{ statusLabel(t.status) }}
+                </span>
+              </div>
+              <p class="text-[10px] text-slate-400">{{ t.user?.email }}</p>
+            </div>
+          </div>
+          <div>
+            <p class="font-semibold text-[#0f172a] text-[13px] line-clamp-1">{{ t.subject }}</p>
+            <p class="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{{ t.message }}</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span :class="['px-2 py-0.5 rounded-lg text-[10px] font-semibold', typeBadge(t.type)]">{{ typeLabel(t.type) }}</span>
+            <span :class="['px-2 py-0.5 rounded-lg text-[10px] font-bold', priorityBadge(t.priority)]">{{ priorityLabel(t.priority) }}</span>
+            <span class="text-[10px] text-slate-400 ml-auto">{{ formatDate(t.created_at) }}</span>
+          </div>
+          <div class="flex gap-2 pt-1 border-t border-slate-50">
+            <button @click="openTicket(t)"
+              class="flex-1 py-2 rounded-xl bg-blue-50 text-blue-700 text-[12px] font-semibold hover:bg-blue-100 transition">
+              {{ t.admin_reply ? 'Ver / Editar' : 'Responder' }}
+            </button>
+            <button v-if="t.status !== 'closed'" @click="quickClose(t)"
+              class="px-4 py-2 rounded-xl bg-slate-100 text-slate-500 text-[12px] font-semibold hover:bg-red-50 hover:text-red-600 transition">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop table (≥ md) -->
+      <div class="hidden md:block overflow-x-auto">
+      <table class="w-full border-collapse text-[13px] min-w-[700px]">
         <thead>
           <tr>
             <th v-for="h in ['#','Usuario','Asunto','Tipo','Prioridad','Estado','Fecha','Acciones']" :key="h"
@@ -140,6 +181,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
 
       <!-- Paginación -->
       <div v-if="pages > 1" class="flex items-center justify-center gap-4 px-5 py-4 border-t border-slate-100">

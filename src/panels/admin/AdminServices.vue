@@ -27,50 +27,95 @@
       </select>
     </div>
 
-    <!-- Tabla -->
+    <!-- Cards mobile / Table desktop -->
     <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50">
-          <tr>
-            <th v-for="h in ['Servicio','Categoría','Precio','Estado','Acciones']" :key="h"
-              class="text-left px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-50">
-          <tr v-if="svcLoading">
-            <td colspan="5" class="px-6 py-8 text-center text-slate-300 text-[13px]">Cargando servicios…</td>
-          </tr>
-          <tr v-else-if="!filteredAdminServices.length">
-            <td colspan="5" class="px-6 py-8 text-center text-slate-300 text-[13px]">No hay servicios</td>
-          </tr>
-          <tr v-for="s in filteredAdminServices" :key="s.id" class="hover:bg-slate-50 transition">
-            <td class="px-6 py-4">
-              <p class="font-semibold text-[#0f172a] text-[13px]">{{ s.name }}</p>
-              <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{{ s.description }}</p>
-            </td>
-            <td class="px-6 py-4">
-              <span class="bg-teal-100 text-teal-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full">{{ s.category }}</span>
-            </td>
-            <td class="px-6 py-4 font-bold text-[#0f172a] text-[13px]">
-              ${{ Number(s.price ?? 0).toLocaleString('es-CO') }}
-            </td>
-            <td class="px-6 py-4">
-              <span :class="['text-[10px] font-bold px-2.5 py-0.5 rounded-full', s.active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600']">
+
+      <!-- Loading / Empty states -->
+      <div v-if="svcLoading" class="px-6 py-8 text-center text-slate-300 text-[13px]">Cargando servicios…</div>
+      <div v-else-if="!filteredAdminServices.length" class="px-6 py-8 text-center text-slate-300 text-[13px]">No hay servicios</div>
+
+      <template v-else>
+        <!-- Mobile cards (< md) -->
+        <div class="md:hidden divide-y divide-slate-50">
+          <div v-for="s in svsMobilePagedItems" :key="s.id" class="p-4 space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <p class="font-bold text-[#0f172a] text-[13px]">{{ s.name }}</p>
+                <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{{ s.description }}</p>
+              </div>
+              <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0', s.active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600']">
                 {{ s.active ? 'Activo' : 'Inactivo' }}
               </span>
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex gap-3">
-                <button @click="openSvcModal(s)" class="text-[12px] text-blue-600 hover:underline font-semibold">Editar</button>
-                <button @click="toggleSvcStatus(s)" :class="['text-[12px] font-semibold hover:underline', s.active ? 'text-amber-600' : 'text-emerald-600']">
-                  {{ s.active ? 'Desactivar' : 'Activar' }}
-                </button>
-                <button @click="deleteSvc(s.id)" class="text-[12px] text-red-500 hover:underline font-semibold">Eliminar</button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="bg-teal-100 text-teal-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full">{{ s.category }}</span>
+              <span class="font-bold text-[#0f172a] text-[13px] ml-auto">${{ Number(s.price ?? 0).toLocaleString('es-CO') }}</span>
+            </div>
+            <div class="flex gap-2 pt-2 border-t border-slate-50">
+              <button @click="openSvcModal(s)"
+                class="flex-1 py-2 rounded-xl bg-blue-50 text-blue-700 text-[12px] font-semibold hover:bg-blue-100 transition">
+                Editar
+              </button>
+              <button @click="toggleSvcStatus(s)"
+                :class="['flex-1 py-2 rounded-xl text-[12px] font-semibold transition', s.active ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100']">
+                {{ s.active ? 'Desactivar' : 'Activar' }}
+              </button>
+              <button @click="deleteSvc(s.id)"
+                class="px-4 py-2 rounded-xl bg-red-50 text-red-600 text-[12px] font-semibold hover:bg-red-100 transition">
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Mobile pagination -->
+        <div v-if="svsMobileTotalPages > 1" class="md:hidden flex items-center justify-center gap-3 px-4 py-3 border-t border-slate-100">
+          <button :disabled="svsMobilePage <= 1" @click="svsMobilePage--"
+            class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">‹</button>
+          <span class="text-[12px] text-slate-500 font-semibold">{{ svsMobilePage }} / {{ svsMobileTotalPages }}</span>
+          <button :disabled="svsMobilePage >= svsMobileTotalPages" @click="svsMobilePage++"
+            class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold disabled:opacity-30 hover:bg-slate-200 transition">›</button>
+        </div>
+
+        <!-- Desktop table (≥ md) -->
+        <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-sm min-w-[540px]">
+          <thead class="bg-slate-50">
+            <tr>
+              <th v-for="h in ['Servicio','Categoría','Precio','Estado','Acciones']" :key="h"
+                class="text-left px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            <tr v-for="s in filteredAdminServices" :key="s.id" class="hover:bg-slate-50 transition">
+              <td class="px-6 py-4">
+                <p class="font-semibold text-[#0f172a] text-[13px]">{{ s.name }}</p>
+                <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{{ s.description }}</p>
+              </td>
+              <td class="px-6 py-4">
+                <span class="bg-teal-100 text-teal-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full">{{ s.category }}</span>
+              </td>
+              <td class="px-6 py-4 font-bold text-[#0f172a] text-[13px]">
+                ${{ Number(s.price ?? 0).toLocaleString('es-CO') }}
+              </td>
+              <td class="px-6 py-4">
+                <span :class="['text-[10px] font-bold px-2.5 py-0.5 rounded-full', s.active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600']">
+                  {{ s.active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td class="px-6 py-4">
+                <div class="flex gap-3">
+                  <button @click="openSvcModal(s)" class="text-[12px] text-blue-600 hover:underline font-semibold">Editar</button>
+                  <button @click="toggleSvcStatus(s)" :class="['text-[12px] font-semibold hover:underline', s.active ? 'text-amber-600' : 'text-emerald-600']">
+                    {{ s.active ? 'Desactivar' : 'Activar' }}
+                  </button>
+                  <button @click="deleteSvc(s.id)" class="text-[12px] text-red-500 hover:underline font-semibold">Eliminar</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </template>
     </div>
 
   </div>
@@ -159,7 +204,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import api from '@/services/api'
 import serviceService from '@/services/serviceService'
 import { useAdminToast } from './useAdminToast'
@@ -185,6 +230,15 @@ const filteredAdminServices = computed(() =>
     return matchName && matchCat
   })
 )
+
+const SVC_MOBILE_PG = 6
+const svsMobilePage = ref(1)
+const svsMobilePagedItems = computed(() => {
+  const start = (svsMobilePage.value - 1) * SVC_MOBILE_PG
+  return filteredAdminServices.value.slice(start, start + SVC_MOBILE_PG)
+})
+const svsMobileTotalPages = computed(() => Math.ceil(filteredAdminServices.value.length / SVC_MOBILE_PG))
+watch([svcSearch, svcCatFilter], () => { svsMobilePage.value = 1 })
 
 const openSvcModal = (svc) => {
   editingSvc.value    = svc
