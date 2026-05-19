@@ -19,7 +19,7 @@
     </div>
 
     <!-- KPIs -->
-    <div class="grid grid-cols-4 gap-4" v-if="stats">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" v-if="stats">
       <div class="bg-white border border-slate-100 rounded-2xl p-5 flex items-center gap-4">
         <div class="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-2xl flex-shrink-0">💰</div>
         <div>
@@ -54,14 +54,14 @@
       </div>
     </div>
     <!-- KPI skeleton -->
-    <div v-else class="grid grid-cols-4 gap-4">
+    <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div v-for="n in 4" :key="n" class="bg-white border border-slate-100 rounded-2xl p-5 h-24 animate-pulse bg-slate-50"></div>
     </div>
 
     <!-- Tabs -->
-    <div class="flex gap-2">
+    <div class="flex gap-2 overflow-x-auto pb-0.5">
       <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
-        :class="['flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold border transition',
+        :class="['flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold border transition flex-shrink-0',
           activeTab === tab.id
             ? 'bg-white border-[#0d4f5c] text-[#0d4f5c] shadow-sm'
             : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300']">
@@ -100,37 +100,79 @@
         <div v-if="!pending.data?.length" class="flex justify-center py-14 text-slate-300 text-[13px]">
           No hay dispersiones pendientes
         </div>
-        <table v-else class="w-full text-sm">
-          <thead class="bg-slate-50">
-            <tr>
-              <th v-for="h in ['SR#','Servicio','Profesional','Monto bruto','Estado','Última actualización','Acción']" :key="h"
-                class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-50">
-            <tr v-for="sr in pending.data" :key="sr.id" class="hover:bg-slate-50 transition">
-              <td class="px-5 py-3 font-mono text-[12px] text-slate-600">{{ sr.id }}</td>
-              <td class="px-5 py-3 text-[13px] text-[#0f172a]">{{ sr.service_name }}</td>
-              <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ sr.professional_name }}</td>
-              <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ sr.budget_formatted }}</td>
-              <td class="px-5 py-3">
-                <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full',
+        <template v-else>
+          <!-- Mobile cards -->
+          <div class="md:hidden space-y-3 p-3">
+            <div v-for="sr in pending.data" :key="sr.id" class="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <p class="font-bold text-[#0f172a] text-[13px]">{{ sr.service_name }}</p>
+                  <p class="text-[10px] text-slate-400 font-mono">SR#{{ sr.id }}</p>
+                </div>
+                <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0',
                   sr.payout_status === 'payout_failed' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700']">
                   {{ sr.payout_status === 'payout_failed' ? 'Falló' : 'Pendiente' }}
                 </span>
-              </td>
-              <td class="px-5 py-3 text-[12px] text-slate-400">{{ fmtDateTime(sr.updated_at) }}</td>
-              <td class="px-5 py-3">
+              </div>
+              <div class="grid grid-cols-2 gap-y-2 text-[12px]">
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Profesional</p>
+                  <p class="font-bold text-[#0f172a]">{{ sr.professional_name }}</p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Monto</p>
+                  <p class="font-bold text-[#0f172a]">{{ sr.budget_formatted }}</p>
+                </div>
+                <div class="col-span-2">
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Actualizado</p>
+                  <p class="text-slate-500">{{ fmtDateTime(sr.updated_at) }}</p>
+                </div>
+              </div>
+              <div class="pt-2 border-t border-slate-50">
                 <button @click="disburse(sr.id)" :disabled="disbursing === sr.id"
-                  class="flex items-center gap-1.5 bg-[#0d4f5c] text-white text-[12px] font-bold px-3 py-1.5 rounded-lg hover:opacity-90 transition disabled:opacity-60">
+                  class="w-full flex items-center justify-center gap-1.5 bg-[#0d4f5c] text-white text-[12px] font-bold px-3 py-2 rounded-xl hover:opacity-90 transition disabled:opacity-60">
                   <svg v-if="disbursing === sr.id" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
                   <span v-else>💸</span>
                   Dispersar
                 </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+            </div>
+          </div>
+          <!-- Desktop table -->
+          <div class="hidden md:block overflow-x-auto">
+          <table class="w-full text-sm min-w-[740px]">
+            <thead class="bg-slate-50">
+              <tr>
+                <th v-for="h in ['SR#','Servicio','Profesional','Monto bruto','Estado','Última actualización','Acción']" :key="h"
+                  class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              <tr v-for="sr in pending.data" :key="sr.id" class="hover:bg-slate-50 transition">
+                <td class="px-5 py-3 font-mono text-[12px] text-slate-600">{{ sr.id }}</td>
+                <td class="px-5 py-3 text-[13px] text-[#0f172a]">{{ sr.service_name }}</td>
+                <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ sr.professional_name }}</td>
+                <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ sr.budget_formatted }}</td>
+                <td class="px-5 py-3">
+                  <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full',
+                    sr.payout_status === 'payout_failed' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700']">
+                    {{ sr.payout_status === 'payout_failed' ? 'Falló' : 'Pendiente' }}
+                  </span>
+                </td>
+                <td class="px-5 py-3 text-[12px] text-slate-400">{{ fmtDateTime(sr.updated_at) }}</td>
+                <td class="px-5 py-3">
+                  <button @click="disburse(sr.id)" :disabled="disbursing === sr.id"
+                    class="flex items-center gap-1.5 bg-[#0d4f5c] text-white text-[12px] font-bold px-3 py-1.5 rounded-lg hover:opacity-90 transition disabled:opacity-60">
+                    <svg v-if="disbursing === sr.id" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                    <span v-else>💸</span>
+                    Dispersar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </template>
         <div v-if="pending.last_page > 1" class="flex items-center justify-center gap-2 px-5 py-3 border-t border-slate-100">
           <button class="page-btn" :disabled="pending.current_page <= 1" @click="loadPending(pending.current_page - 1)">‹</button>
           <span class="text-[12px] text-slate-500">Página {{ pending.current_page }} / {{ pending.last_page }}</span>
@@ -152,16 +194,16 @@
         </div>
 
         <!-- Dev simulate panel -->
-        <div class="flex items-center gap-3 mx-5 my-4 px-4 py-3 bg-amber-50 border border-amber-200 border-dashed rounded-xl">
-          <span class="text-[12px] font-bold text-amber-700 flex-shrink-0">🧪 Modo desarrollo</span>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 mx-5 my-4 px-4 py-3 bg-amber-50 border border-amber-200 border-dashed rounded-xl">
+          <span class="text-[12px] font-bold text-amber-700">🧪 Modo desarrollo</span>
           <input v-model="simSrId" type="number" placeholder="ID de solicitud (SR#)"
             class="flex-1 bg-white border border-amber-200 rounded-lg px-3 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-amber-400/30" />
           <button @click="simulatePayment" :disabled="simulating || !simSrId"
-            class="bg-amber-500 text-white text-[12px] font-bold px-4 py-1.5 rounded-lg hover:bg-amber-600 transition disabled:opacity-50 flex-shrink-0">
+            class="bg-amber-500 text-white text-[12px] font-bold px-4 py-1.5 rounded-lg hover:bg-amber-600 transition disabled:opacity-50 sm:flex-shrink-0">
             <svg v-if="simulating" class="inline animate-spin w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
             Simular pago aprobado
           </button>
-          <span v-if="simResult" :class="['text-[12px] font-semibold flex-shrink-0', simResult.success ? 'text-emerald-600' : 'text-red-600']">
+          <span v-if="simResult" :class="['text-[12px] font-semibold', simResult.success ? 'text-emerald-600' : 'text-red-600']">
             {{ simResult.message }}
           </span>
         </div>
@@ -169,32 +211,65 @@
         <div v-if="!payments.data?.length" class="flex justify-center py-14 text-slate-300 text-[13px]">
           Sin cobros registrados aún
         </div>
-        <table v-else class="w-full text-sm">
-          <thead class="bg-slate-50">
-            <tr>
-              <th v-for="h in ['#','Referencia','Cliente','Servicio','Monto','Estado','Fecha']" :key="h"
-                class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-50">
-            <tr v-for="p in payments.data" :key="p.id" class="hover:bg-slate-50 transition">
-              <td class="px-5 py-3 font-mono text-[12px] text-slate-500">{{ p.id }}</td>
-              <td class="px-5 py-3 font-mono text-[11px] text-slate-500">{{ p.reference }}</td>
-              <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.client_name }}</td>
-              <td class="px-5 py-3 text-[13px] text-slate-600">
-                {{ p.service_name }}
-                <span v-if="p.service_request_id" class="ml-1 bg-slate-100 text-slate-500 text-[10px] font-bold px-1.5 py-0.5 rounded">#{{ p.service_request_id }}</span>
-              </td>
-              <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.amount_formatted }}</td>
-              <td class="px-5 py-3">
-                <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full', statusClass(p.status)]">
+        <template v-else>
+          <!-- Mobile cards -->
+          <div class="md:hidden space-y-3 p-3">
+            <div v-for="p in payments.data" :key="p.id" class="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <p class="font-bold text-[#0f172a] text-[13px]">{{ p.client_name }}</p>
+                  <p class="text-[10px] text-slate-400 font-mono">{{ p.reference }}</p>
+                </div>
+                <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0', statusClass(p.status)]">
                   {{ statusLabel(p.status) }}
                 </span>
-              </td>
-              <td class="px-5 py-3 text-[12px] text-slate-400">{{ fmtDateTime(p.paid_at ?? p.created_at) }}</td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+              <div class="grid grid-cols-2 gap-y-2 text-[12px]">
+                <div class="col-span-2">
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Servicio</p>
+                  <p class="text-slate-600">{{ p.service_name }}<span v-if="p.service_request_id" class="ml-1 bg-slate-100 text-slate-500 text-[10px] font-bold px-1.5 py-0.5 rounded">#{{ p.service_request_id }}</span></p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Monto</p>
+                  <p class="font-bold text-[#0f172a]">{{ p.amount_formatted }}</p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Fecha</p>
+                  <p class="text-slate-500">{{ fmtDateTime(p.paid_at ?? p.created_at) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Desktop table -->
+          <div class="hidden md:block overflow-x-auto">
+          <table class="w-full text-sm min-w-[700px]">
+            <thead class="bg-slate-50">
+              <tr>
+                <th v-for="h in ['#','Referencia','Cliente','Servicio','Monto','Estado','Fecha']" :key="h"
+                  class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              <tr v-for="p in payments.data" :key="p.id" class="hover:bg-slate-50 transition">
+                <td class="px-5 py-3 font-mono text-[12px] text-slate-500">{{ p.id }}</td>
+                <td class="px-5 py-3 font-mono text-[11px] text-slate-500">{{ p.reference }}</td>
+                <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.client_name }}</td>
+                <td class="px-5 py-3 text-[13px] text-slate-600">
+                  {{ p.service_name }}
+                  <span v-if="p.service_request_id" class="ml-1 bg-slate-100 text-slate-500 text-[10px] font-bold px-1.5 py-0.5 rounded">#{{ p.service_request_id }}</span>
+                </td>
+                <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.amount_formatted }}</td>
+                <td class="px-5 py-3">
+                  <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full', statusClass(p.status)]">
+                    {{ statusLabel(p.status) }}
+                  </span>
+                </td>
+                <td class="px-5 py-3 text-[12px] text-slate-400">{{ fmtDateTime(p.paid_at ?? p.created_at) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </template>
         <div v-if="payments.last_page > 1" class="flex items-center justify-center gap-2 px-5 py-3 border-t border-slate-100">
           <button class="page-btn" :disabled="payments.current_page <= 1" @click="loadPayments(payments.current_page - 1)">‹</button>
           <span class="text-[12px] text-slate-500">Página {{ payments.current_page }} / {{ payments.last_page }}</span>
@@ -218,39 +293,79 @@
         <div v-if="!payouts.data?.length" class="flex justify-center py-14 text-slate-300 text-[13px]">
           Sin dispersiones registradas aún
         </div>
-        <table v-else class="w-full text-sm">
-          <thead class="bg-slate-50">
-            <tr>
-              <th v-for="h in ['#','Profesional','Monto','Método','Estado Wompi','Estado','Origen','Fecha']" :key="h"
-                class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-50">
-            <tr v-for="p in payouts.data" :key="p.id" class="hover:bg-slate-50 transition">
-              <td class="px-5 py-3 font-mono text-[12px] text-slate-500">{{ p.id }}</td>
-              <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.professional_name }}</td>
-              <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.amount_formatted }}</td>
-              <td class="px-5 py-3 text-[12px] text-slate-500">{{ methodLabel(p.payment_method) }}</td>
-              <td class="px-5 py-3">
-                <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
-                  {{ p.wompi_status ?? '—' }}
-                </span>
-              </td>
-              <td class="px-5 py-3">
-                <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full', statusClass(p.status)]">
+        <template v-else>
+          <!-- Mobile cards -->
+          <div class="md:hidden space-y-3 p-3">
+            <div v-for="p in payouts.data" :key="p.id" class="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <p class="font-bold text-[#0f172a] text-[13px]">{{ p.professional_name }}</p>
+                  <p class="text-[10px] text-slate-400 font-mono">#{{ p.id }}</p>
+                </div>
+                <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0', statusClass(p.status)]">
                   {{ statusLabel(p.status) }}
                 </span>
-              </td>
-              <td class="px-5 py-3">
-                <span :class="['text-[10px] font-bold px-2 py-0.5 rounded-full',
-                  p.triggered_by === 'auto' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700']">
-                  {{ p.triggered_by === 'auto' ? 'Automático' : 'Manual' }}
-                </span>
-              </td>
-              <td class="px-5 py-3 text-[12px] text-slate-400">{{ fmtDateTime(p.paid_at ?? p.created_at) }}</td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+              <div class="grid grid-cols-2 gap-y-2 text-[12px]">
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Monto</p>
+                  <p class="font-bold text-[#0f172a]">{{ p.amount_formatted }}</p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Método</p>
+                  <p class="text-slate-600">{{ methodLabel(p.payment_method) }}</p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Origen</p>
+                  <span :class="['text-[10px] font-bold px-2 py-0.5 rounded-full',
+                    p.triggered_by === 'auto' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700']">
+                    {{ p.triggered_by === 'auto' ? 'Auto' : 'Manual' }}
+                  </span>
+                </div>
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Fecha</p>
+                  <p class="text-slate-500">{{ fmtDateTime(p.paid_at ?? p.created_at) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Desktop table -->
+          <div class="hidden md:block overflow-x-auto">
+          <table class="w-full text-sm min-w-[780px]">
+            <thead class="bg-slate-50">
+              <tr>
+                <th v-for="h in ['#','Profesional','Monto','Método','Estado Wompi','Estado','Origen','Fecha']" :key="h"
+                  class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              <tr v-for="p in payouts.data" :key="p.id" class="hover:bg-slate-50 transition">
+                <td class="px-5 py-3 font-mono text-[12px] text-slate-500">{{ p.id }}</td>
+                <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.professional_name }}</td>
+                <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.amount_formatted }}</td>
+                <td class="px-5 py-3 text-[12px] text-slate-500">{{ methodLabel(p.payment_method) }}</td>
+                <td class="px-5 py-3">
+                  <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+                    {{ p.wompi_status ?? '—' }}
+                  </span>
+                </td>
+                <td class="px-5 py-3">
+                  <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full', statusClass(p.status)]">
+                    {{ statusLabel(p.status) }}
+                  </span>
+                </td>
+                <td class="px-5 py-3">
+                  <span :class="['text-[10px] font-bold px-2 py-0.5 rounded-full',
+                    p.triggered_by === 'auto' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700']">
+                    {{ p.triggered_by === 'auto' ? 'Automático' : 'Manual' }}
+                  </span>
+                </td>
+                <td class="px-5 py-3 text-[12px] text-slate-400">{{ fmtDateTime(p.paid_at ?? p.created_at) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </template>
         <div v-if="payouts.last_page > 1" class="flex items-center justify-center gap-2 px-5 py-3 border-t border-slate-100">
           <button class="page-btn" :disabled="payouts.current_page <= 1" @click="loadPayouts(payouts.current_page - 1)">‹</button>
           <span class="text-[12px] text-slate-500">Página {{ payouts.current_page }} / {{ payouts.last_page }}</span>
