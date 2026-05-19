@@ -1,28 +1,45 @@
 <template>
   <div class="flex h-full overflow-hidden">
 
-    <!-- Sidebar (dark teal) -->
-    <div class="w-56 flex-shrink-0 h-full" style="background:#0d4f5c">
+    <!-- Sidebar (dark teal) — hidden on mobile -->
+    <div class="hidden md:flex-shrink-0 md:block md:w-56 h-full" style="background:#0d4f5c">
       <AppSidebar :items="navItems" :activePage="page" :dark="true" @navigate="page = $event" @logout="authStore.logout()" />
     </div>
+
+    <!-- Mobile sidebar drawer -->
+    <Teleport to="body">
+      <Transition name="adm-drawer">
+        <div v-if="mobileAdminSidebarOpen" class="fixed inset-0 z-50 flex md:hidden">
+          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="mobileAdminSidebarOpen = false" />
+          <div class="relative w-64 max-w-[85vw] h-full shadow-2xl flex flex-col overflow-hidden" style="background:#0d4f5c">
+            <AppSidebar :items="navItems" :activePage="page" :dark="true" :showClose="true"
+              @navigate="page = $event; mobileAdminSidebarOpen = false"
+              @logout="authStore.logout()"
+              @closeMobile="mobileAdminSidebarOpen = false" />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Main area -->
     <div :class="['flex-1 overflow-hidden flex flex-col adp-root', isDark ? 'bg-[#0f172a]' : 'bg-[#f0f4f8]']">
 
       <!-- Top bar -->
-      <div :class="['flex-shrink-0 flex items-center justify-between px-8 py-4 border-b', isDark ? 'bg-[#1e293b] border-white/8' : 'bg-white border-slate-100']">
-        <h2 class="text-lg font-black text-[#0f172a]">{{ pageTitle }}</h2>
+      <div :class="['flex-shrink-0 flex items-center justify-between px-4 md:px-8 py-3 md:py-4 border-b', isDark ? 'bg-[#1e293b] border-white/8' : 'bg-white border-slate-100']">
         <div class="flex items-center gap-3">
+          <h2 class="text-[15px] md:text-lg font-black text-[#0f172a] truncate">{{ pageTitle }}</h2>
+        </div>
+        <div class="flex items-center gap-2 md:gap-3">
           <!-- Tema toggle -->
           <button @click="themeStore.toggle()"
             :class="['w-9 h-9 rounded-xl flex items-center justify-center transition text-sm', isDark ? 'bg-white/10 hover:bg-white/15' : 'bg-slate-50 hover:bg-slate-100 border border-slate-200']">
             {{ isDark ? '☀️' : '🌙' }}
           </button>
-          <button class="flex items-center gap-2 border border-slate-200 text-[13px] text-slate-600 font-semibold px-4 py-2 rounded-xl hover:bg-slate-50 transition">
+          <button class="hidden sm:flex items-center gap-2 border border-slate-200 text-[13px] text-slate-600 font-semibold px-4 py-2 rounded-xl hover:bg-slate-50 transition">
             <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="11" y2="11"/></svg>
             Hoy, 15 de mayo ▾
           </button>
-          <div class="flex items-center gap-2.5 cursor-pointer">
+          <div class="hidden sm:flex items-center gap-2.5 cursor-pointer">
             <div class="w-8 h-8 rounded-full bg-[#0d4f5c] flex items-center justify-center flex-shrink-0">
               <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
@@ -31,11 +48,18 @@
               <p class="text-[10px] text-slate-400">Super Admin ▾</p>
             </div>
           </div>
+          <!-- Cerrar sesión (solo mobile) -->
+          <button @click="authStore.logout()" title="Cerrar sesión"
+            class="md:hidden w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center hover:bg-red-100 transition flex-shrink-0">
+            <svg viewBox="0 0 24 24" class="w-[17px] h-[17px] text-red-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+            </svg>
+          </button>
         </div>
       </div>
 
       <!-- Content -->
-      <div class="flex-1 overflow-y-auto p-6 space-y-6">
+      <div class="flex-1 overflow-y-auto p-3 pb-20 md:p-6 space-y-4 md:space-y-6">
 
         <!-- ===== DASHBOARD ===== -->
         <template v-if="page === 'Panel de administración'">
@@ -69,12 +93,12 @@
           </div>
 
           <!-- 6 stat cards -->
-          <div class="grid grid-cols-6 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
             <StatCard v-for="s in stats" :key="s.label" v-bind="s" :dark="isDark" />
           </div>
 
           <!-- 4 charts 2x2 -->
-          <div class="grid grid-cols-2 gap-5">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
 
             <!-- Chart 1: Multi-series line (Gráfico de usuarios) -->
             <div class="bg-white border border-slate-100 rounded-2xl p-5">
@@ -229,6 +253,23 @@
         </template>
 
       </div>
+
+      <!-- Mobile Bottom Tab Bar — todos los menús con scroll horizontal -->
+      <nav class="md:hidden flex-shrink-0 bg-white border-t border-slate-100" style="padding-bottom:env(safe-area-inset-bottom,0px)">
+        <div class="flex overflow-x-auto" style="scrollbar-width:none;-ms-overflow-style:none">
+          <button v-for="item in navItems.filter(i => !i.divider)" :key="item.name"
+            @click="page = item.name"
+            :class="['flex-shrink-0 flex flex-col items-center gap-0.5 pt-2 pb-1.5 px-3 min-w-[62px] transition-colors',
+              page === item.name ? 'text-[#0d4f5c]' : 'text-slate-400']">
+            <div :class="['relative w-10 h-8 rounded-xl flex items-center justify-center transition-colors',
+              page === item.name ? 'bg-teal-50' : '']">
+              <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" v-html="item.iconSvg"/>
+              <span v-if="item.badge" class="absolute -top-1 -right-1 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center leading-none">{{ item.badge > 9 ? '9+' : item.badge }}</span>
+            </div>
+            <span class="text-[10px] font-bold whitespace-nowrap">{{ item.label ?? item.name }}</span>
+          </button>
+        </div>
+      </nav>
     </div>
   </div>
 
@@ -254,6 +295,14 @@
 <style scoped>
 .fade-enter-active, .fade-leave-active { transition: opacity .2s ease }
 .fade-enter-from, .fade-leave-to       { opacity: 0 }
+
+/* Admin mobile drawer animation */
+.adm-drawer-enter-active { transition: opacity .25s ease }
+.adm-drawer-leave-active { transition: opacity .2s ease }
+.adm-drawer-enter-from, .adm-drawer-leave-to { opacity: 0 }
+.adm-drawer-enter-active > div:last-child { transition: transform .25s ease }
+.adm-drawer-leave-active > div:last-child { transition: transform .2s ease }
+.adm-drawer-enter-from > div:last-child, .adm-drawer-leave-to > div:last-child { transform: translateX(-100%) }
 </style>
 
 <script setup>
@@ -283,6 +332,7 @@ const adminName = computed(() => authStore.user?.name ?? 'Administrador')
 const { toasts, showToast, removeToast } = useAdminToast()
 
 const page = ref('Panel de administración')
+const mobileAdminSidebarOpen = ref(false)
 
 const pageTitle = computed(() => page.value)
 
@@ -300,19 +350,19 @@ const SVG = {
 }
 
 const navItems = [
-  { name:'Panel de administración', iconSvg: SVG.home  },
+  { name:'Panel de administración', label:'Panel admin',  iconSvg: SVG.home  },
   { divider: true },
-  { name:'Usuarios',      iconSvg: SVG.users },
-  { name:'Categorías',    iconSvg: `<path d="M4 20h4a2 2 0 0 0 2-2V4H4v14a2 2 0 0 0 0 4zm16-16H12v12h8V4z"/>` },
+  { name:'Usuarios',      label:'Usuarios',   iconSvg: SVG.users },
+  { name:'Categorías',    label:'Categorías', iconSvg: `<path d="M4 20h4a2 2 0 0 0 2-2V4H4v14a2 2 0 0 0 0 4zm16-16H12v12h8V4z"/>` },
   { divider: true },
-  { name:'Pagos',             iconSvg: SVG.card  },
-  { name:'Servicios en Vivo', iconSvg: `<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>` },
-  { name:'Administradores', iconSvg: `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>` },
-  { name:'Auditoría',       iconSvg: `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>` },
-  { name:'Reportes',        iconSvg: SVG.bar   },
+  { name:'Pagos',             label:'Pagos',    iconSvg: SVG.card  },
+  { name:'Servicios en Vivo', label:'En Vivo',  iconSvg: `<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>` },
+  { name:'Administradores', label:'Admins',   iconSvg: `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>` },
+  { name:'Auditoría',       label:'Auditoría',iconSvg: `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>` },
+  { name:'Reportes',        label:'Reportes', iconSvg: SVG.bar   },
   { divider: true },
-  { name:'Configuración', iconSvg: SVG.set   },
-  { name:'Soporte',       iconSvg: SVG.supp  },
+  { name:'Configuración', label:'Ajustes', iconSvg: SVG.set   },
+  { name:'Soporte',       label:'Soporte',  iconSvg: SVG.supp  },
 ]
 
 // ─── Dashboard real API ───────────────────────────────────────────────────────

@@ -5,7 +5,7 @@
       <p class="text-sm text-slate-400 mt-0.5">Ajustes generales del sistema</p>
     </div>
 
-    <div class="grid grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
       <!-- General -->
       <div class="bg-white border border-slate-100 rounded-2xl p-6 space-y-4">
