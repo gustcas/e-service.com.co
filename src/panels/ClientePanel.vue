@@ -2469,6 +2469,7 @@ const _loadWompiScript = () => new Promise((resolve, reject) => {
   if (window.WidgetCheckout) { resolve(); return }
   const s = document.createElement('script')
   s.src = 'https://checkout.wompi.co/widget.js'
+  s.setAttribute('data-auto-open', 'false') 
   s.onload = () => { console.log('[Wompi] script loaded, WidgetCheckout:', !!window.WidgetCheckout); resolve() }
   s.onerror = (err) => { console.error('[Wompi] script onerror', err); reject(new Error('Script bloqueado o sin red')) }
   document.head.appendChild(s)
@@ -2580,6 +2581,7 @@ const openWompi = async ({ reference, amount, signature, publicKey }) => {
       await new Promise((resolve, reject) => {
         const s = document.createElement('script')
         s.src     = 'https://checkout.wompi.co/widget.js'
+        s.setAttribute('data-auto-open', 'false')
         s.onload  = resolve
         s.onerror = reject
         document.head.appendChild(s)
