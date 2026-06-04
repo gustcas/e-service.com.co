@@ -288,7 +288,19 @@
                     <span class="font-black text-emerald-600">${{ req.price }}</span>
                   </div>
                   <button @click="openEvidences(req)" class="w-full border border-slate-200 bg-white hover:bg-slate-50 text-[12px] font-semibold text-slate-600 py-2 rounded-xl transition">🖼️ Ver evidencias</button>
-                  <button v-if="isCapacitacionReq(req)" @click="downloadActa(req)" class="w-full border border-slate-200 bg-white hover:bg-slate-50 text-[12px] font-semibold text-slate-600 py-2 rounded-xl transition">📄 Descargar acta</button>
+                  <template v-if="isCapacitacionReq(req)">
+                    <button v-if="actaAvailable(req)" @click="downloadActa(req)"
+                      class="w-full border border-slate-200 bg-white hover:bg-slate-50 text-[12px] font-semibold text-slate-600 py-2 rounded-xl transition">
+                      📄 Descargar acta
+                    </button>
+                    <div v-else class="w-full border border-slate-200 bg-slate-50 text-[12px] text-slate-400 py-2 rounded-xl text-center cursor-not-allowed select-none">
+                      🕐 Disponible en {{ actaCountdown(req) }}
+                    </div>
+                  </template>
+                  <button v-if="isSaneamientoReq(req)" @click="downloadSaneamiento(req)"
+                    class="w-full border border-slate-200 bg-white hover:bg-slate-50 text-[12px] font-semibold text-slate-600 py-2 rounded-xl transition">
+                    📄 Descargar acta
+                  </button>
                   <button v-if="!req._rated" @click="openRatingModal(req)" class="w-full border border-amber-200 bg-amber-50 hover:bg-amber-100 text-[12px] font-semibold text-amber-600 py-2 rounded-xl transition">⭐ Calificar profesional</button>
                   <span v-else class="flex justify-center text-[12px] text-emerald-600 font-semibold py-1">✓ Calificación enviada</span>
                 </div>
@@ -354,7 +366,19 @@
                         <button v-if="ACTIVE_SET.includes(req.status)" @click="req.completion_code ? Object.assign(codeModal, {open:true,req}) : generateCode(req)" :disabled="generating === req.id" class="text-[11px] font-bold text-blue-600 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition whitespace-nowrap disabled:opacity-60">🔐 Código</button>
                         <button v-if="(ACTIVE_SET.includes(req.status) || req.status === 'completed') && req.pro" @click="openChatWithPro(req)" class="text-[11px] font-bold text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition whitespace-nowrap">💬 Chat</button>
                         <button v-if="req.status === 'completed'" @click="openEvidences(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">🖼️ Ver</button>
-                        <button v-if="req.status === 'completed' && isCapacitacionReq(req)" @click="downloadActa(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">📄 Descargar acta</button>
+                        <template v-if="req.status === 'completed' && isCapacitacionReq(req)">
+                          <button v-if="actaAvailable(req)" @click="downloadActa(req)"
+                            class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">
+                            📄 Descargar acta
+                          </button>
+                          <span v-else class="text-[11px] text-slate-400 border border-slate-200 px-2.5 py-1 rounded-lg whitespace-nowrap cursor-not-allowed">
+                            🕐 {{ actaCountdown(req) }}
+                          </span>
+                        </template>
+                        <button v-if="req.status === 'completed' && isSaneamientoReq(req)" @click="downloadSaneamiento(req)"
+                          class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">
+                          📄 Descargar acta
+                        </button>
                         <button v-if="req.status === 'completed' && !req._rated" @click="openRatingModal(req)" class="text-[11px] font-bold text-amber-600 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-50 transition whitespace-nowrap">⭐ Calificar</button>
                       </div>
                     </td>
@@ -799,6 +823,44 @@
         </div>
       </Transition>
     </div>
+    
+<!-- Modal subcategorías de certificación -->
+    <Transition name="fade">
+      <div v-if="showCertSubcatModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" style="background:rgba(15,23,42,0.55);">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+          <div class="flex items-center justify-between px-7 py-5 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl flex items-center justify-center" :style="{background: selectedCategoryModal?.iconBg}">
+                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" :stroke="selectedCategoryModal?.iconColor" v-html="selectedCategoryModal?.iconSvg" />
+              </div>
+              <div>
+                <p class="font-black text-[#0f172a]">{{ selectedService?.name || 'Capacitación' }}</p>
+                <p class="text-[12px] text-slate-400">Elige el tipo de establecimiento</p>
+              </div>
+            </div>
+            <button @click="showCertSubcatModal = false" class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition text-lg">×</button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-6">
+            <div class="grid grid-cols-2 gap-4">
+              <div
+                v-for="sub in certSubcategories" :key="sub.id"
+                @click="openCertSubcat(sub)"
+                class="border border-slate-100 rounded-2xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/50 hover:-translate-y-0.5 transition-all"
+              >
+                <div class="w-10 h-10 rounded-xl mb-3 flex items-center justify-center" :style="{background: sub.iconBg}">
+                  <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" :stroke="sub.iconColor" v-html="SVG.book" />
+                </div>
+                <p class="text-[13px] font-bold text-[#0f172a]">{{ sub.name }}</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Servicio profesional a domicilio</p>
+                <div class="flex items-center justify-between mt-3">
+                  <span class="text-[13px] font-black text-[#2563ff]">Solicitar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- ===== SERVICES MODAL ===== -->
     <Transition name="fade">
@@ -888,11 +950,28 @@
             <!-- PASO: Descripción -->
             <template v-if="currentStepName === 'Descripción'">
               <div>
-                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">¿Qué necesitas?</label>
+                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">¿Qué necesitas? <span class="text-slate-300 font-normal normal-case">(Opcional)</span></label>
                 <textarea v-model="form.description" rows="4" placeholder="Describe detalladamente lo que necesitas. Ej: limpieza de 2 habitaciones, baño y cocina..."
                   class="w-full border border-slate-200 rounded-xl px-4 py-3 text-[13px] outline-none focus:border-blue-400 transition bg-slate-50 focus:bg-white resize-none" />
               </div>
               <div v-if="isCapacitacion">
+                <!-- Selector de ciclo  -->
+                <template v-if="isCapacitacion">
+                  <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-2">Ciclo de capacitación</label>
+                  <div class="flex gap-2 mb-4">
+                    <button
+                      v-for="c in [1, 2, 3]" :key="c"
+                      type="button"
+                      @click="form.cycle = c"
+                      :class="[
+                        'flex-1 py-2 rounded-xl text-[13px] font-bold border transition',
+                        form.cycle === c
+                          ? 'bg-[#2563ff] text-white border-[#2563ff]'
+                          : 'bg-white text-slate-500 border-slate-200 hover:border-[#2563ff] hover:text-[#2563ff]'
+                      ]"
+                    >Ciclo {{ c }}</button>
+                  </div>
+                </template>
                 <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-2">Número de personas</label>
                 <div class="flex items-center gap-4">
                   <button @click="form.people_count = Math.max(1, form.people_count - 1)"
@@ -944,6 +1023,11 @@
                     <input v-model="form.company_phone" type="tel" placeholder="Número de celular"
                       class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition bg-slate-50 focus:bg-white" />
                   </div>
+                </div>
+                <div>
+                  <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">📍 Localidad</label>
+                  <input v-model="form.company_locality" type="text" placeholder="Ej: Chapinero, Suba, Usaquén..."
+                    class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition bg-slate-50 focus:bg-white" />
                 </div>
                 <div>
                   <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">🌆 Ciudad</label>
@@ -1609,6 +1693,7 @@ const catStyleDefaults = [
   { name:'Mudanza',      iconSvg: SVG.tool,     iconColor:'#64748b', iconBg:'#f8fafc' },
 ]
 
+
 const catStyleFor = (name) => {
   const lower = name.toLowerCase()
   return catStyleDefaults.find(d => lower.includes(d.name.toLowerCase())) ?? catStyleDefaults[0]
@@ -1752,15 +1837,55 @@ const openChatWithPro = (req) => {
   })
 }
 
-const isCapacitacionReq = (req) => /capacit|virtual/i.test(req.name ?? '')
+const isCapacitacionReq  = (req) => /capacit|virtual/i.test(req.name ?? '')
+const isSaneamientoReq   = (req) => /saneamiento/i.test(req.category_name ?? req.name ?? '')
 
 const downloadActa = async (req) => {
   try {
-    const res = await api.get(`/client/requests/${req.id}/document/1`, { responseType: 'blob' })
-    const url  = URL.createObjectURL(new Blob([res.data], { type: res.data.type }))
-    const a    = document.createElement('a'); a.href = url
-    a.download = `Acta-${req.num}.docx`; a.click(); URL.revokeObjectURL(url)
+    const docType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    const downloads = [
+      { endpoint: 'plan',  name: `Plan_Capacitacion_${req.num}.docx` },
+      { endpoint: 'eval',  name: `Evaluacion_${req.num}.docx` },
+      { endpoint: 'video', name: `Video_${req.num}.docx` },
+    ]
+    for (const doc of downloads) {
+      try {
+        const res = await api.get(`/client/requests/${req.id}/certification-document/${doc.endpoint}`, { responseType: 'blob' })
+        const url = URL.createObjectURL(new Blob([res.data], { type: docType }))
+        const a   = document.createElement('a'); a.href = url
+        a.download = doc.name; a.click(); URL.revokeObjectURL(url)
+        await new Promise(r => setTimeout(r, 500))
+      } catch { /* si un archivo no existe, continuar con el siguiente */ }
+    }
   } catch { showToast('No se pudo descargar el acta', 'error') }
+}
+
+const downloadSaneamiento = async (req) => {
+  try {
+    const res = await api.get(`/client/requests/${req.id}/saneamiento-document`, { responseType: 'blob' })
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }))
+    const a   = document.createElement('a'); a.href = url
+    a.download = `PlanSaneamiento_${req.num}.docx`; a.click(); URL.revokeObjectURL(url)
+  } catch { showToast('No se pudo descargar el documento', 'error') }
+}
+
+const actaAvailable = (req) => {
+  if (!req.completed_at) return false
+  const completedAt = new Date(req.completed_at)
+  const hoursElapsed = (Date.now() - completedAt.getTime()) / (1000 * 60 * 60)
+  return hoursElapsed >= 72
+}
+
+const actaCountdown = (req) => {
+  if (!req.completed_at) return ''
+  const completedAt  = new Date(req.completed_at)
+  const unlockAt     = new Date(completedAt.getTime() + 72 * 60 * 60 * 1000)
+  const diffMs       = unlockAt.getTime() - Date.now()
+  if (diffMs <= 0) return ''
+  const totalMinutes = Math.floor(diffMs / (1000 * 60))
+  const hours        = Math.floor(totalMinutes / 60)
+  const minutes      = totalMinutes % 60
+  return `${hours}h ${String(minutes).padStart(2, '0')}m`
 }
 
 // ─── Favoritos ───────────────────────────────────────────────────────────────
@@ -2143,8 +2268,8 @@ const showToast = (message, type = 'info') => {
 const dismissToast = (id) => { toasts.value = toasts.value.filter(t => t.id !== id) }
 
 // ─── Services modal ──────────────────────────────────────────────────────────
-const showServicesModal   = ref(false)
-const selectedCategoryModal = ref(null)
+const showServicesModal        = ref(false)
+const selectedCategoryModal    = ref(null)
 
 const servicesByCategory = computed(() => {
   if (!selectedCategoryModal.value) return []
@@ -2161,8 +2286,20 @@ const openCategoryModal = (cat) => {
   showServicesModal.value = true
 }
 
+const certSubcategories = [
+  { id: 'bar',          name: 'Bar',          iconColor: '#7c3aed', iconBg: '#f5f3ff' },
+  { id: 'carnes',       name: 'Carnes',       iconColor: '#dc2626', iconBg: '#fef2f2' },
+  { id: 'cigarreria',   name: 'Cigarrería',   iconColor: '#92400e', iconBg: '#fffbeb' },
+  { id: 'fruver',       name: 'Fruver',       iconColor: '#16a34a', iconBg: '#f0fdf4' },
+  { id: 'panaderia',    name: 'Panadería',    iconColor: '#f59e0b', iconBg: '#fef3c7' },
+  { id: 'restaurante',  name: 'Restaurante',  iconColor: '#0284c7', iconBg: '#f0f9ff' },
+  { id: 'supermercado', name: 'Supermercado', iconColor: '#0891b2', iconBg: '#ecfeff' },
+]
+
 // ─── Request form modal ──────────────────────────────────────────────────────
-const showRequestModal = ref(false)
+const showRequestModal     = ref(false)
+const showCertSubcatModal  = ref(false)
+const selectedCertSubcat   = ref(null)
 const selectedService  = ref(null)
 const formStep         = ref(0)
 const submitting       = ref(false)
@@ -2176,6 +2313,7 @@ const form = reactive({
   company_nit:    '',
   company_address:'',
   company_phone:  '',
+  company_locality: '',
   company_owners: '',
   address:        '',
   reference_note: '',
@@ -2184,17 +2322,20 @@ const form = reactive({
   city_id:        1,
   service_date:   '',
   service_time:   '09:00',
+  cycle:          1,
   payment_reference: '',
   payment_amount:    0,
 })
 
 const isVirtual      = computed(() => selectedService.value?.name?.toLowerCase().includes('virtual') ?? false)
 const isCapacitacion = computed(() => selectedCategoryModal.value?.name?.toLowerCase().includes('capacit') ?? false)
+const isSaneamiento   = computed(() => selectedCategoryModal.value?.name?.toLowerCase().includes('saneamiento') ?? false)
+
 
 const visibleSteps = computed(() => {
   const steps = ['Descripción']
-  if (isCapacitacion.value || isVirtual.value) steps.push('Empresa')
-  if (!isVirtual.value) { steps.push('Ubicación'); steps.push('Fecha y hora') }
+  if (isCapacitacion.value || isVirtual.value || isSaneamiento.value) steps.push('Empresa')
+  if (!isVirtual.value && !isSaneamiento.value) { steps.push('Ubicación'); steps.push('Fecha y hora') }
   steps.push('Confirmar')
   return steps
 })
@@ -2239,11 +2380,22 @@ const openServiceRequest = (svc) => {
   }
   showServicesModal.value = false
   formStep.value = 0
-  form.description = ''; form.people_count = 1
+  form.description = ''; form.people_count = 1; form.cycle = 1
   form.company_name = ''; form.company_nit = ''; form.company_address = ''
-  form.company_phone = ''; form.company_owners = ''
+  form.company_phone = ''; form.company_owners = ''; form.company_locality = ''
   form.address = ''; form.reference_note = ''; form.lat = null; form.lng = null
   form.service_date = ''; form.service_time = '09:00'
+  // Si es capacitación → primero elegir subcategoría (tipo de establecimiento)
+  if (isCapacitacion.value) {
+    showCertSubcatModal.value = true
+    return
+  }
+  showRequestModal.value = true
+}
+
+const openCertSubcat = (subcat) => {
+  selectedCertSubcat.value = subcat
+  showCertSubcatModal.value = false
   showRequestModal.value = true
 }
 
@@ -2254,7 +2406,6 @@ const closeRequestModal = () => {
 
 const validateStep = () => {
   const s = currentStepName.value
-  if (s === 'Descripción' && !form.description.trim()) { showToast('Describe lo que necesitas', 'error'); return false }
   if (s === 'Ubicación'   && !form.address.trim())     { showToast('Ingresa la dirección del servicio', 'error'); return false }
   if (s === 'Fecha y hora' && !form.service_date)      { showToast('Selecciona la fecha del servicio', 'error'); return false }
   return true
@@ -2283,6 +2434,7 @@ const submitRequest = async () => {
       company_nit:     form.company_nit,
       company_address: form.company_address,
       company_phone:   form.company_phone,
+      company_locality: form.company_locality,
       company_owners:  form.company_owners,
       address:         form.address,
       reference_note:  form.reference_note,
@@ -2291,6 +2443,8 @@ const submitRequest = async () => {
       city_id:         form.city_id,
       service_date:    form.service_date || minDate.value,
       service_time:    form.service_time || '09:00',
+      cycle:             isCapacitacion.value ? form.cycle : null,
+      cert_subcategory:  isCapacitacion.value ? (selectedCertSubcat.value?.id ?? null) : (isSaneamiento.value ? (selectedCertSubcat.value?.id ?? null) : null),
     }
     const { data: srData } = await api.post('/client/service-request', payload)
     pendingPayment.value = {
@@ -2788,6 +2942,8 @@ const loadRequests = async () => {
         payment_reference:          r.payment_reference          ?? null,
         conversation_id:            r.conversation_id            ?? null,
         _rated: !!(r.is_rated || r.rated_at || r.review),
+        completed_at:  r.completed_at ?? null,
+        category_name: r.category_name ?? r.category?.name ?? '',
       }))
     }
   } catch { /* keep mock data */ }
