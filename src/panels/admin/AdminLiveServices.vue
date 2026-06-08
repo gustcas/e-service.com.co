@@ -611,6 +611,23 @@
                       <p v-if="ev.description" class="text-[10px] text-slate-400 px-1.5 pb-1 text-center truncate w-full">{{ ev.description }}</p>
                     </a>
                   </div>
+                  </div>
+                <!-- Documentación del servicio -->
+                <div v-if="detailModal.req.status === 'completed'" class="space-y-2">
+                  <p class="text-[11px] font-black text-blue-600 uppercase tracking-wide pb-1.5 border-b border-slate-100">📄 Documentación del servicio</p>
+                  <div v-if="adminDocList(detailModal.req).length === 0" class="text-[13px] text-slate-400 py-2">Sin documentación registrada.</div>
+                  <div v-else class="grid grid-cols-3 gap-2.5 pt-1">
+                    <button
+                      v-for="doc in adminDocList(detailModal.req)" :key="doc.type"
+                      @click="downloadAdminDoc(detailModal.req, doc.type)"
+                      class="flex flex-col items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50 hover:border-blue-400 hover:shadow-sm transition p-3 gap-1.5">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#2563ff" stroke-width="1.5" width="26" height="26">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      <span class="text-[10px] text-center text-slate-600 font-semibold">{{ doc.label }}</span>
+                      <span class="text-[10px] text-blue-500">Descargar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -993,6 +1010,49 @@ const openDetail = async (req) => {
   } finally {
     detailModal.value.loadingEvidences = false
   }
+}
+
+const downloadAdminDoc = async (req, type) => {
+  const docType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  let endpoint = ''
+  let filename  = ''
+
+  if (type === 'plan') {
+    endpoint = `/admin/requests/${req.id}/certification-document/plan`
+    filename  = `Plan_Capacitacion_${req.id}.docx`
+  } else if (type === 'eval') {
+    endpoint = `/admin/requests/${req.id}/certification-document/eval`
+    filename  = `Evaluacion_${req.id}.docx`
+  } else if (type === 'video') {
+    endpoint = `/admin/requests/${req.id}/certification-document/video`
+    filename  = `Video_${req.id}.docx`
+  } else if (type === 'saneamiento') {
+    endpoint = `/admin/requests/${req.id}/saneamiento-document-admin`
+    filename  = `PlanSaneamiento_${req.id}.docx`
+  }
+
+  try {
+    const res = await api.get(endpoint, { responseType: 'blob' })
+    const url = URL.createObjectURL(new Blob([res.data], { type: docType }))
+    const a   = document.createElement('a'); a.href = url
+    a.download = filename; a.click(); URL.revokeObjectURL(url)
+  } catch {
+    // documento no disponible
+  }
+}
+
+const adminDocList = (req) => {
+  const isCert  = /capacit/i.test(req.category_name ?? req.service_name ?? '')
+  const isSaneo = /saneamiento/i.test(req.category_name ?? req.service_name ?? '')
+  if (isCert) return [
+    { type: 'plan',  label: 'Plan de Capacitación' },
+    { type: 'eval',  label: 'Evaluación' },
+    { type: 'video', label: 'Video' },
+  ]
+  if (isSaneo) return [
+    { type: 'saneamiento', label: 'Plan de Saneamiento' },
+  ]
+  return []
 }
 
 const applyDetailReassign = async () => {

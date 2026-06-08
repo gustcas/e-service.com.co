@@ -15,16 +15,16 @@
       </template>
     </div>
 
-    <!-- ── NAVBAR ── -->
-    <header :class="['fixed top-0 inset-x-0 z-50 transition-all duration-300',
-      scrollY > 60
-        ? (isDark ? 'bg-[#0d1b2e]/90 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20'
-                  : 'bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm')
-        : 'bg-transparent']">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        <a href="#inicio" @click.prevent="scrollTo('inicio')" class="flex items-center gap-2 flex-shrink-0">
-          <img src="/images/logo-services-sin-fondo.png" alt="e-service" class="h-9 w-auto" />
-        </a>
+<!-- ── NAVBAR ── -->
+<header :class="['fixed top-0 inset-x-0 z-50 transition-all duration-300',
+  scrollY > 60
+    ? (isDark ? 'bg-[#0d1b2e]/90 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20'
+              : 'bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm')
+    : 'bg-transparent']">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 h-32 flex items-center justify-between gap-4">
+    <a href="#inicio" @click.prevent="scrollTo('inicio')" class="flex items-center gap-2 flex-shrink-0">
+      <img src="/images/logo-services-sin-fondo.png" alt="e-service" class="h-32 w-auto" />
+    </a>
 
         <nav class="hidden md:flex items-center gap-6 flex-1 justify-center">
           <a v-for="l in navLinks" :key="l.id" @click.prevent="scrollTo(l.id)"
