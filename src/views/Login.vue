@@ -9,10 +9,22 @@
     </div>
 
     <div class="relative z-10 w-full max-w-[470px] mx-auto px-4 py-10">
+
+        <!-- Botón atrás -->
+<div class="mb-6 flex justify-start">
+  <a href="/" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 border border-white/25 text-white/85 hover:text-white hover:bg-white/22 hover:border-white/40 text-sm font-semibold transition-all hover:-translate-x-0.5
+  sm:fixed sm:top-6 sm:left-6">
+    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 5l-7 7 7 7"/>
+    </svg>
+    Volver al inicio
+  </a>
+</div>
+
       <!-- Logo -->
       <div class="text-center mb-9">
         <div class="flex flex-col items-center gap-2 mb-3">
-          <img src="/images/logo-services-sin-fondo.png" alt="e-service" class="h-20 w-auto object-contain drop-shadow-lg" />
+          <img src="/images/logo-services-sin-fondo.png" alt="e-service" class="h-[200px]  w-auto object-contain drop-shadow-lg" />
         </div>
       </div>
 
