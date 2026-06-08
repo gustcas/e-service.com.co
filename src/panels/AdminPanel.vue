@@ -222,6 +222,10 @@
         <template v-else-if="page === 'Categorías'">
           <AdminCategories />
         </template>
+        <!-- ===== CUENTAS ===== -->
+        <template v-else-if="page === 'Cuentas'">
+          <AdminPayoutAccounts />
+        </template>
 
         <!-- ===== SUB-ADMINS ===== -->
         <template v-else-if="page === 'Administradores'">
@@ -314,6 +318,7 @@ import AppSidebar from '../components/AppSidebar.vue'
 import StatCard   from '../components/StatCard.vue'
 import AdminSettings    from './admin/AdminSettings.vue'
 import AdminCategories  from './admin/AdminCategories.vue'
+import AdminPayoutAccounts  from './admin/AdminPayoutAccounts.vue'
 import AdminSubAdmins   from './admin/AdminSubAdmins.vue'
 import AdminUsers       from './admin/AdminUsers.vue'
 import AdminPayments      from './admin/AdminPayments.vue'
@@ -354,6 +359,7 @@ const navItems = [
   { divider: true },
   { name:'Usuarios',      label:'Usuarios',   iconSvg: SVG.users },
   { name:'Categorías',    label:'Categorías', iconSvg: `<path d="M4 20h4a2 2 0 0 0 2-2V4H4v14a2 2 0 0 0 0 4zm16-16H12v12h8V4z"/>` },
+  { name:'Cuentas', label:'Cuentas', iconSvg: `<path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/><circle cx="12" cy="14" r="1"/>` },
   { divider: true },
   { name:'Pagos',             label:'Pagos',    iconSvg: SVG.card  },
   { name:'Servicios en Vivo', label:'En Vivo',  iconSvg: `<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>` },

@@ -1,5 +1,16 @@
 <template>
   <div class="flex h-full overflow-hidden bg-[#f0f4f8] md:p-3 md:gap-3 clp-root">
+    <!-- Loading overlay -->
+<div v-if="appLoading" class="fixed inset-0 z-[999] bg-white flex items-center justify-center">
+  <div class="flex flex-col items-center gap-3">
+    <div class="w-10 h-10 rounded-2xl bg-[#2563ff] flex items-center justify-center animate-pulse">
+      <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="white" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <p class="text-[13px] text-slate-400 font-medium">Cargando...</p>
+  </div>
+</div>
 
     <!-- Sidebar card — hidden on mobile -->
     <div :class="['hidden md:flex-shrink-0 md:block md:w-56 rounded-2xl shadow-sm overflow-hidden', isDark ? 'bg-[#071126]' : 'bg-white']">
@@ -84,16 +95,26 @@
               <button class="text-[13px] text-[#2563ff] font-semibold hover:underline">Ver todas</button>
             </div>
             <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
-              <button
-                v-for="cat in filteredCats" :key="cat.id"
-                @click="openCategoryModal(cat)"
-                class="flex flex-col items-center gap-2.5 bg-white border border-slate-100 rounded-2xl py-4 px-2 hover:border-blue-200 hover:shadow-md hover:shadow-blue-50 hover:-translate-y-0.5 transition-all text-center group cursor-pointer"
-              >
-                <div class="w-12 h-12 rounded-2xl flex items-center justify-center" :style="{background: cat.iconBg}">
-                  <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" :stroke="cat.iconColor" v-html="cat.iconSvg" />
+              <!-- Skeleton mientras cargan categorías -->
+              <template v-if="catsLoading">
+                <div v-for="n in 6" :key="n"
+                  class="flex flex-col items-center gap-2.5 bg-white border border-slate-100 rounded-2xl py-4 px-2 animate-pulse">
+                  <div class="w-12 h-12 rounded-2xl bg-slate-200"></div>
+                  <div class="h-2.5 bg-slate-200 rounded-full w-3/4"></div>
                 </div>
-                <span class="text-[11px] font-semibold text-slate-700 leading-tight">{{ cat.name }}</span>
-              </button>
+              </template>
+              <template v-else>
+                <button
+                  v-for="cat in filteredCats" :key="cat.id"
+                  @click="openCategoryModal(cat)"
+                  class="flex flex-col items-center gap-2.5 bg-white border border-slate-100 rounded-2xl py-4 px-2 hover:border-blue-200 hover:shadow-md hover:shadow-blue-50 hover:-translate-y-0.5 transition-all text-center group cursor-pointer"
+                >
+                  <div class="w-12 h-12 rounded-2xl flex items-center justify-center" :style="{background: cat.iconBg}">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" :stroke="cat.iconColor" v-html="cat.iconSvg" />
+                  </div>
+                  <span class="text-[11px] font-semibold text-slate-700 leading-tight">{{ cat.name }}</span>
+                </button>
+              </template>
             </div>
           </div>
 
@@ -104,23 +125,37 @@
               <button class="text-[13px] text-[#2563ff] font-semibold hover:underline">Ver más</button>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div
-                v-for="s in services" :key="s.id"
-                @click="openServiceRequest(s)"
-                class="bg-white border border-slate-100 rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200 transition-all"
-              >
-                <div class="h-36 flex items-center justify-center" :style="{background: s.gradient}">
-                  <svg viewBox="0 0 24 24" class="w-14 h-14 opacity-60" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :stroke="s.iconColor" v-html="s.iconSvg" />
-                </div>
-                <div class="p-3.5">
-                  <p class="text-[13px] font-bold text-[#0f172a]">{{ s.name }}</p>
-                  <p class="text-[12px] text-slate-400 mt-0.5">Desde ${{ s.price }}</p>
-                  <div class="flex items-center gap-1 mt-2">
-                    <span v-for="i in 3" :key="i" class="text-[13px] text-amber-400">★</span>
-                    <span class="text-[11px] text-slate-400 ml-1">{{ s.rating }} ({{ s.reviews }})</span>
+              <!-- Skeleton mientras cargan servicios -->
+              <template v-if="servicesLoading">
+                <div v-for="n in 4" :key="n"
+                  class="bg-white border border-slate-100 rounded-2xl overflow-hidden animate-pulse">
+                  <div class="h-36 bg-slate-200"></div>
+                  <div class="p-3.5 space-y-2">
+                    <div class="h-3 bg-slate-200 rounded-full w-3/4"></div>
+                    <div class="h-3 bg-slate-100 rounded-full w-1/2"></div>
+                    <div class="h-2.5 bg-slate-100 rounded-full w-1/3 mt-2"></div>
                   </div>
                 </div>
-              </div>
+              </template>
+              <template v-else>
+                <div
+                  v-for="s in services" :key="s.id"
+                  @click="openServiceRequest(s)"
+                  class="bg-white border border-slate-100 rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200 transition-all"
+                >
+                  <div class="h-36 flex items-center justify-center" :style="{background: s.gradient}">
+                    <svg viewBox="0 0 24 24" class="w-14 h-14 opacity-60" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :stroke="s.iconColor" v-html="s.iconSvg" />
+                  </div>
+                  <div class="p-3.5">
+                    <p class="text-[13px] font-bold text-[#0f172a]">{{ s.name }}</p>
+                    <p class="text-[12px] text-slate-400 mt-0.5">Desde ${{ s.price }}</p>
+                    <div class="flex items-center gap-1 mt-2">
+                      <span v-for="i in 3" :key="i" class="text-[13px] text-amber-400">★</span>
+                      <span class="text-[11px] text-slate-400 ml-1">{{ s.rating }} ({{ s.reviews }})</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
         </template>
@@ -291,7 +326,7 @@
                   <template v-if="isCapacitacionReq(req)">
                     <button v-if="actaAvailable(req)" @click="downloadActa(req)"
                       class="w-full border border-slate-200 bg-white hover:bg-slate-50 text-[12px] font-semibold text-slate-600 py-2 rounded-xl transition">
-                      📄 Descargar acta
+                      📄 Descargar documentos
                     </button>
                     <div v-else class="w-full border border-slate-200 bg-slate-50 text-[12px] text-slate-400 py-2 rounded-xl text-center cursor-not-allowed select-none">
                       🕐 Disponible en {{ actaCountdown(req) }}
@@ -299,7 +334,7 @@
                   </template>
                   <button v-if="isSaneamientoReq(req)" @click="downloadSaneamiento(req)"
                     class="w-full border border-slate-200 bg-white hover:bg-slate-50 text-[12px] font-semibold text-slate-600 py-2 rounded-xl transition">
-                    📄 Descargar acta
+                    📄 Descargar documentos
                   </button>
                   <button v-if="!req._rated" @click="openRatingModal(req)" class="w-full border border-amber-200 bg-amber-50 hover:bg-amber-100 text-[12px] font-semibold text-amber-600 py-2 rounded-xl transition">⭐ Calificar profesional</button>
                   <span v-else class="flex justify-center text-[12px] text-emerald-600 font-semibold py-1">✓ Calificación enviada</span>
@@ -369,7 +404,7 @@
                         <template v-if="req.status === 'completed' && isCapacitacionReq(req)">
                           <button v-if="actaAvailable(req)" @click="downloadActa(req)"
                             class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">
-                            📄 Descargar acta
+                            📄 Descargar documentos
                           </button>
                           <span v-else class="text-[11px] text-slate-400 border border-slate-200 px-2.5 py-1 rounded-lg whitespace-nowrap cursor-not-allowed">
                             🕐 {{ actaCountdown(req) }}
@@ -377,7 +412,7 @@
                         </template>
                         <button v-if="req.status === 'completed' && isSaneamientoReq(req)" @click="downloadSaneamiento(req)"
                           class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">
-                          📄 Descargar acta
+                          📄 Descargar documentos
                         </button>
                         <button v-if="req.status === 'completed' && !req._rated" @click="openRatingModal(req)" class="text-[11px] font-bold text-amber-600 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-50 transition whitespace-nowrap">⭐ Calificar</button>
                       </div>
@@ -1600,6 +1635,7 @@
 
 <script setup>
 import { ref, computed, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useFormValidation } from '@/composables/useFormValidation'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import categoryService from '@/services/categoryService'
@@ -1664,7 +1700,7 @@ const unreadCounts = ref({ notifications: 0, messages: 0, pending_requests: 0 })
 const navItems = computed(() => [
   { name:'Inicio',           label:'Inicio',      iconSvg: SVG.home     },
   { name:'Mis solicitudes',  label:'Solicitudes', iconSvg: SVG.clip,    badge: unreadCounts.value.pending_requests || undefined },
-  { name:'Favoritos',        label:'Favoritos',   iconSvg: SVG.heart    },
+ // { name:'Favoritos',        label:'Favoritos',   iconSvg: SVG.heart    }, //
   { divider: true },
   { name:'Mensajes',         label:'Mensajes',    iconSvg: SVG.message, badge: unreadCounts.value.messages        || undefined },
   { name:'Notificaciones',   label:'Notifs',      iconSvg: SVG.bell,    badge: unreadCounts.value.notifications   || undefined },
@@ -1699,14 +1735,11 @@ const catStyleFor = (name) => {
   return catStyleDefaults.find(d => lower.includes(d.name.toLowerCase())) ?? catStyleDefaults[0]
 }
 
-const cats       = ref(catStyleDefaults.map((d, i) => ({ id: i + 1, ...d })))
+const cats       = ref([])
+const catsLoading = ref(true)
 const allServices = ref([])
-const services   = ref([
-  { id:1, name:'Limpieza a domicilio',  price:'50.000', price_raw:50000, rating:4.9, reviews:120, category_id:null, iconSvg: SVG.check,    iconColor:'#10b981', gradient:'linear-gradient(135deg,#f0fdf4,#bbf7d0)' },
-  { id:2, name:'Manicure y pedicure',   price:'35.000', price_raw:35000, rating:4.8, reviews:98,  category_id:null, iconSvg: SVG.scissors, iconColor:'#db2777', gradient:'linear-gradient(135deg,#fdf2f8,#fbcfe8)' },
-  { id:3, name:'Clases personalizadas', price:'60.000', price_raw:60000, rating:4.9, reviews:110, category_id:null, iconSvg: SVG.book,     iconColor:'#2563ff', gradient:'linear-gradient(135deg,#eff6ff,#bfdbfe)' },
-  { id:4, name:'Paseo de mascotas',     price:'25.000', price_raw:25000, rating:4.7, reviews:85,  category_id:null, iconSvg: SVG.paw,      iconColor:'#16a34a', gradient:'linear-gradient(135deg,#f0fdf4,#d1fae5)' },
-])
+const services        = ref([])
+const servicesLoading = ref(true)
 
 const filteredCats = computed(() => {
   const q = search.value.toLowerCase().trim()
@@ -1718,13 +1751,7 @@ const filteredCats = computed(() => {
 const PENDING_STATUSES = ['pending', 'payment_pending']
 
 const reqsLoading = ref(false)
-const reqs = ref([
-  { id:1, num:'0001', name:'Instalación eléctrica', description:'Instalación de toma corrientes', pro:'Carlos Mendez',  proPhone:'3001234567', date:'2026-05-15 09:00', address:'Calle 80 # 45-20, Bogotá', is_virtual:false, people_count:1, price:'120.000', price_raw:120000, status:'accepted',       status_label:'EN CURSO',        completion_code:null, _rated:false },
-  { id:2, num:'0002', name:'Limpieza profunda',     description:'Limpieza general hogar',         pro:'María González', proPhone:'3009876543', date:'2026-05-10 14:00', address:'Carrera 15 # 100-30',       is_virtual:false, people_count:1, price:'80.000',  price_raw:80000,  status:'completed',      status_label:'COMPLETADA',      completion_code:null, _rated:false },
-  { id:3, num:'0003', name:'Reparación tubería',    description:'Fuga en el baño principal',      pro:'Luis Rodríguez', proPhone:'3005551234', date:'2026-05-05 10:00', address:'Av. El Dorado # 68-35',     is_virtual:false, people_count:1, price:'95.000',  price_raw:95000,  status:'completed',      status_label:'COMPLETADA',      completion_code:null, _rated:true  },
-  { id:4, num:'0004', name:'Pintura sala',          description:'Pintura sala y comedor',         pro:null,             proPhone:null,         date:'2026-04-28 08:00', address:null,                        is_virtual:false, people_count:1, price:'200.000', price_raw:200000, status:'payment_pending', status_label:'PAGO PENDIENTE',  completion_code:null, _rated:false },
-  { id:5, num:'0005', name:'Capacitación Virtual',  description:'Curso online de Excel',          pro:'Ana Torres',     proPhone:'3106667788', date:'2026-04-20 15:00', address:null,                        is_virtual:true,  people_count:2, price:'60.000',  price_raw:60000,  status:'completed',      status_label:'COMPLETADA',      completion_code:null, _rated:false },
-])
+const reqs = ref([])
 
 const PENDING_SET  = ['pending','payment_pending']
 const ACTIVE_SET   = ['accepted','active']
@@ -1837,7 +1864,7 @@ const openChatWithPro = (req) => {
   })
 }
 
-const isCapacitacionReq  = (req) => /capacit|virtual/i.test(req.name ?? '')
+const isCapacitacionReq  = (req) => ['certificacion_virtual', 'certificacion_presencial'].includes(req.form_type ?? '') || /capacit/i.test(req.category_name ?? '')
 const isSaneamientoReq   = (req) => /saneamiento/i.test(req.category_name ?? req.name ?? '')
 
 const downloadActa = async (req) => {
@@ -1871,13 +1898,17 @@ const downloadSaneamiento = async (req) => {
 
 const actaAvailable = (req) => {
   if (!req.completed_at) return false
-  const completedAt = new Date(req.completed_at)
+  // Virtual: disponible inmediatamente
+  if (req.form_type === 'certificacion_virtual') return true
+  // Presencial: esperar 72hrs
+  const completedAt  = new Date((req.completed_at ?? '').replace(' ', 'T'))
   const hoursElapsed = (Date.now() - completedAt.getTime()) / (1000 * 60 * 60)
   return hoursElapsed >= 72
 }
 
 const actaCountdown = (req) => {
   if (!req.completed_at) return ''
+  if (req.form_type === 'certificacion_virtual') return ''
   const completedAt  = new Date(req.completed_at)
   const unlockAt     = new Date(completedAt.getTime() + 72 * 60 * 60 * 1000)
   const diffMs       = unlockAt.getTime() - Date.now()
@@ -1889,12 +1920,7 @@ const actaCountdown = (req) => {
 }
 
 // ─── Favoritos ───────────────────────────────────────────────────────────────
-const favs = ref([
-  { id:1, name:'Limpieza a domicilio',  category:'Limpieza',  price:'50.000', price_raw:50000, rating:'4.9', iconSvg: SVG.check,    iconColor:'#10b981', gradient:'linear-gradient(135deg,#f0fdf4,#bbf7d0)' },
-  { id:2, name:'Manicure y pedicure',   category:'Belleza',   price:'35.000', price_raw:35000, rating:'4.8', iconSvg: SVG.scissors, iconColor:'#db2777', gradient:'linear-gradient(135deg,#fdf2f8,#fbcfe8)' },
-  { id:3, name:'Plomería general',      category:'Plomería',  price:'70.000', price_raw:70000, rating:'4.7', iconSvg: SVG.droplet,  iconColor:'#0ea5e9', gradient:'linear-gradient(135deg,#e0f2fe,#bae6fd)' },
-  { id:4, name:'Pintura de interiores', category:'Pintura',   price:'90.000', price_raw:90000, rating:'4.9', iconSvg: SVG.brush,    iconColor:'#f97316', gradient:'linear-gradient(135deg,#fff7ed,#fed7aa)' },
-])
+const favs = ref([])
 
 const removeFav = async (id) => {
   favs.value = favs.value.filter(f => f.id !== id)
@@ -1992,13 +2018,7 @@ const loadConversations = async () => {
   } catch { /* keep current */ }
 }
 
-const messages = ref([
-  { id:1, text:'Hola, ¿está disponible para mañana?', mine:false, time:'10:15' },
-  { id:2, text:'Sí, tengo disponibilidad en la tarde.', mine:true, time:'10:18' },
-  { id:3, text:'Perfecto, ¿a qué hora?',               mine:false, time:'10:20' },
-  { id:4, text:'Llego a las 3pm si le parece bien.',   mine:true,  time:'10:22' },
-  { id:5, text:'Perfecto, llego a las 3pm',            mine:false, time:'10:30' },
-])
+const messages = ref([])
 
 const sendMsg = async () => {
   if (!msgText.value.trim()) return
@@ -2068,13 +2088,9 @@ const printInvoice = () => {
   window.print()
 }
 
+const appLoading = ref(true)
 // ─── Notificaciones ──────────────────────────────────────────────────────────
-const notifs = reactive([
-  { id:1, icon:'✅', iconBg:'bg-emerald-100', title:'Servicio completado',     body:'Carlos Mendez completó la instalación.', time:'Hace 2 horas', unread:true  },
-  { id:2, icon:'💬', iconBg:'bg-blue-100',    title:'Nuevo mensaje',           body:'María González te envió un mensaje.',    time:'Hace 4 horas', unread:true  },
-  { id:3, icon:'⭐', iconBg:'bg-amber-100',   title:'Califica tu experiencia', body:'¿Cómo fue tu servicio de plomería?',     time:'Hace 1 día',   unread:false },
-  { id:4, icon:'🔔', iconBg:'bg-purple-100',  title:'Recordatorio',            body:'Tu limpieza es mañana a las 9am.',       time:'Hace 2 días',  unread:false },
-])
+const notifs = reactive([])
 
 const _timeAgo = (iso) => {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000
@@ -2179,12 +2195,7 @@ const submitRating = async () => {
 }
 
 // ─── Pagos ───────────────────────────────────────────────────────────────────
-const payments = ref([
-  { id:1, service:'Instalación eléctrica', pro:'Carlos Mendez',  date:'15 May 2026', amount:'$120.000', amount_raw:120000 },
-  { id:2, service:'Limpieza profunda',     pro:'María González', date:'10 May 2026', amount:'$80.000',  amount_raw:80000  },
-  { id:3, service:'Reparación tubería',    pro:'Luis Rodríguez', date:'05 May 2026', amount:'$95.000',  amount_raw:95000  },
-  { id:4, service:'Pintura sala',          pro:'Ana Martínez',   date:'28 Abr 2026', amount:'$200.000', amount_raw:200000 },
-])
+const payments = ref([])
 const payStats = computed(() => ({
   total: '$' + payments.value.reduce((s, p) => s + (p.amount_raw ?? 0), 0).toLocaleString('es-CO'),
   mes:   '$0',
@@ -2327,15 +2338,17 @@ const form = reactive({
   payment_amount:    0,
 })
 
-const isVirtual      = computed(() => selectedService.value?.name?.toLowerCase().includes('virtual') ?? false)
-const isCapacitacion = computed(() => selectedCategoryModal.value?.name?.toLowerCase().includes('capacit') ?? false)
-const isSaneamiento   = computed(() => selectedCategoryModal.value?.name?.toLowerCase().includes('saneamiento') ?? false)
+const isVirtual               = computed(() => ['virtual', 'certificacion_virtual'].includes(selectedService.value?.form_type ?? ''))
+const isCapacitacion          = computed(() => ['certificacion_virtual', 'certificacion_presencial'].includes(selectedService.value?.form_type ?? ''))
+const isSaneamiento           = computed(() => selectedCategoryModal.value?.name?.toLowerCase().includes('saneamiento') ?? false)
 
 
 const visibleSteps = computed(() => {
+  const ft    = selectedService.value?.form_type ?? 'presencial'
   const steps = ['Descripción']
-  if (isCapacitacion.value || isVirtual.value || isSaneamiento.value) steps.push('Empresa')
-  if (!isVirtual.value && !isSaneamiento.value) { steps.push('Ubicación'); steps.push('Fecha y hora') }
+  if (['virtual', 'certificacion_virtual', 'certificacion_presencial'].includes(ft) || isSaneamiento.value) steps.push('Empresa')
+  if (ft === 'presencial' && !isSaneamiento.value) { steps.push('Ubicación'); steps.push('Fecha y hora') }
+  if (ft === 'certificacion_presencial') { steps.push('Ubicación'); steps.push('Fecha y hora') }
   steps.push('Confirmar')
   return steps
 })
@@ -2406,8 +2419,18 @@ const closeRequestModal = () => {
 
 const validateStep = () => {
   const s = currentStepName.value
-  if (s === 'Ubicación'   && !form.address.trim())     { showToast('Ingresa la dirección del servicio', 'error'); return false }
-  if (s === 'Fecha y hora' && !form.service_date)      { showToast('Selecciona la fecha del servicio', 'error'); return false }
+  if (s === 'Ubicación'   && !form.address.trim())  { showToast('Ingresa la dirección del servicio', 'error'); return false }
+  if (s === 'Fecha y hora' && !form.service_date)   { showToast('Selecciona la fecha del servicio', 'error'); return false }
+if (s === 'Descripción' && isCapacitacion.value) {
+    for (let i = 0; i < form.people_count; i++) {
+      if (!form.people_names[i]?.trim()) {
+        showToast(`Ingresa el nombre del participante ${i + 1}`, 'error'); return false
+      }
+      if (!form.people_identifications[i]?.trim()) {
+        showToast(`Ingresa la identificación del participante ${i + 1}`, 'error'); return false
+      }
+    }
+  }
   return true
 }
 
@@ -2944,6 +2967,7 @@ const loadRequests = async () => {
         _rated: !!(r.is_rated || r.rated_at || r.review),
         completed_at:  r.completed_at ?? null,
         category_name: r.category_name ?? r.category?.name ?? '',
+        form_type:     r.form_type ?? null,
       }))
     }
   } catch { /* keep mock data */ }
@@ -2980,6 +3004,7 @@ onMounted(async () => {
   // Solicitar permiso de ubicación para pre-rellenar dirección al crear servicios
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(() => {}, () => {})
+    appLoading.value = false
   }
 
   // Pre-fill config form from auth store
@@ -2994,7 +3019,8 @@ onMounted(async () => {
   try {
     const { data } = await categoryService.getAllProfesional()
     if (Array.isArray(data) && data.length) {
-      cats.value = data.map(c => ({ ...catStyleFor(c.name), id: c.id, name: c.name }))
+     cats.value = data.map(c => ({ ...catStyleFor(c.name), id: c.id, name: c.name }))
+      catsLoading.value = false
     }
   } catch { /* keep defaults */ }
 
@@ -3023,11 +3049,13 @@ onMounted(async () => {
           iconSvg:       style.iconSvg,
           iconColor:     style.iconColor,
           gradient:      gradients[i % gradients.length],
+          form_type:     s.form_type ?? 'presencial',
           rating:        4.9,
           reviews:       0,
         }
       })
-      services.value = allServices.value.slice(0, 4)
+     services.value = allServices.value.slice(0, 4)
+      servicesLoading.value = false
     }
   } catch { /* keep defaults */ }
 

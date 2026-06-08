@@ -150,6 +150,16 @@
                   class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-teal-500/30"
                   placeholder="Ej: Limpieza a domicilio" />
               </div>
+                <div>
+                <label class="block text-[12px] font-bold text-slate-500 mb-1">Tipo de formulario *</label>
+                <select v-model="svcForm.form_type"
+                  class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-teal-500/30 bg-white">
+                  <option value="presencial">Presencial</option>
+                  <option value="virtual">Virtual</option>
+                  <option value="certificacion_virtual">Certificación Virtual</option>
+                  <option value="certificacion_presencial">Certificación Presencial</option>
+                </select>
+              </div>
               <div>
                 <label class="block text-[12px] font-bold text-slate-500 mb-1">Descripción</label>
                 <textarea v-model="svcForm.description" rows="2"
@@ -220,7 +230,7 @@ const adminServices = reactive([])
 
 const showSvcModal = ref(false)
 const editingSvc   = ref(null)
-const svcForm      = reactive({ name: '', description: '', price: 0, category_id: '', active: true })
+const svcForm = reactive({ name: '', description: '', price: 0, category_id: '', form_type: 'presencial', active: true })
 const svcSaving    = ref(false)
 
 const filteredAdminServices = computed(() =>
@@ -246,6 +256,7 @@ const openSvcModal = (svc) => {
   svcForm.description = svc?.description ?? ''
   svcForm.price       = svc?.price       ?? 0
   svcForm.category_id = svc?.category_id ?? ''
+  svcForm.form_type   = svc?.form_type   ?? 'presencial'
   svcForm.active      = svc?.active      ?? true
   showSvcModal.value  = true
 }
@@ -266,6 +277,7 @@ const saveSvc = async () => {
           price:       svcForm.price,
           category:    catObj?.name ?? svcForm.category_id,
           category_id: svcForm.category_id,
+          form_type:   svcForm.form_type,
           active:      svcForm.active,
         })
       }
@@ -279,6 +291,7 @@ const saveSvc = async () => {
         price:       svcForm.price,
         category:    catObj?.name ?? '',
         category_id: svcForm.category_id,
+        form_type:   svcForm.form_type,
         active:      svcForm.active,
       })
       showToast('Servicio creado', 'success')
@@ -323,6 +336,7 @@ onMounted(async () => {
         category:    s.category_name ?? s.category?.name ?? '—',
         category_id: s.category_id  ?? s.category?.id   ?? '',
         price:       Number(s.price ?? 0),
+        form_type:   s.form_type ?? 'presencial',
         active:      s.active ?? true,
       })))
     }

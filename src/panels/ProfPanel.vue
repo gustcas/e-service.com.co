@@ -122,7 +122,17 @@
 
           <!-- Stats -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard v-for="s in stats" :key="s.label" v-bind="s" :dark="isDark" />
+            <template v-if="dashLoading">
+              <div v-for="n in 4" :key="n"
+                class="bg-white rounded-2xl p-4 space-y-2.5 border border-slate-100 animate-pulse">
+                <div class="h-3 bg-slate-200 rounded-full w-1/2"></div>
+                <div class="h-6 bg-slate-100 rounded-full w-2/3"></div>
+                <div class="h-2.5 bg-slate-100 rounded-full w-1/3"></div>
+              </div>
+            </template>
+            <template v-else>
+              <StatCard v-for="s in stats" :key="s.label" v-bind="s" :dark="isDark" />
+            </template>
           </div>
 
           <!-- MAPA -->
@@ -622,7 +632,16 @@
                     <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.client }}</td>
                     <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.date }}</td>
                     <td class="px-6 py-4 font-black text-emerald-600 text-[13px]">{{ p.amount }}</td>
-                    <td class="px-6 py-4"><span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">Cobrado</span></td>
+                    <td class="px-6 py-4">
+                      <span v-if="p.disbursement_status === 'paid'"
+                        class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">Cobrado</span>
+                      <span v-else-if="p.disbursement_status === 'processing'"
+                        class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-[11px] font-bold">Procesando</span>
+                      <span v-else-if="p.disbursement_status === 'failed'"
+                        class="bg-red-100 text-red-600 px-2.5 py-1 rounded-full text-[11px] font-bold">Fallido</span>
+                      <span v-else
+                        class="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-[11px] font-bold">Pendiente</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -1269,9 +1288,15 @@
             <button class="btn-modal-close-ev" @click="showEvidModal = false">✕</button>
           </div>
           <div class="evidences-grid" v-if="jobEvidences.length">
-            <div v-for="ev in jobEvidences" :key="ev.id" class="evidence-item">
-              <img v-if="ev.file_type === 'image'" :src="ev.file_url" class="ev-preview" />
-              <div v-else class="ev-file-icon">{{ ev.file_type === 'video' ? '🎥' : '📄' }}</div>
+            <div v-for="ev in jobEvidences" :key="ev.id" class="evidence-item" style="position:relative">
+              <button v-if="selectedJobForEvid?.status === 'accepted'"
+                @click="deleteEvidence(ev)"
+                style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:#ef4444;color:white;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:10;line-height:1">×</button>
+              <a :href="ev.file_url" target="_blank">
+                <img v-if="ev.file_type === 'image'" :src="ev.file_url" class="ev-preview"
+                  style="cursor:pointer" @error="e => e.target.style.display='none'" />
+                <div v-else class="ev-file-icon">{{ ev.file_type === 'video' ? '🎥' : '📄' }}</div>
+              </a>
               <p class="ev-note">{{ ev.note || 'Sin nota' }}</p>
               <span class="ev-date">{{ ev.created_at }}</span>
             </div>
@@ -1348,6 +1373,33 @@
           <div class="flex gap-3 px-8 pb-8">
             <button @click="closeWelcomeModal" class="flex-1 border border-slate-200 text-[13px] font-semibold text-slate-600 py-2.5 rounded-xl hover:bg-slate-50 transition">Explorar primero</button>
             <button @click="page = 'Perfil profesional'; closeWelcomeModal()" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[13px] font-bold py-2.5 rounded-xl hover:opacity-90 transition">Completar perfil</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+    <!-- Modal confirmar eliminar evidencia -->
+    <Transition name="modal">
+      <div v-if="showDeleteEvidModal" class="modal-overlay-full modal-center" @click.self="showDeleteEvidModal = false">
+        <div :class="['rounded-3xl shadow-2xl w-full p-7 text-center space-y-4', isDark ? 'bg-[#1e293b]' : 'bg-white']" style="max-width:360px">
+          <div class="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto">
+            <svg viewBox="0 0 24 24" class="w-7 h-7 text-red-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+          </div>
+          <div>
+            <p :class="['font-black text-[16px]', isDark ? 'text-white' : 'text-[#0f172a]']">¿Eliminar evidencia?</p>
+            <p class="text-[13px] text-slate-400 mt-1">Esta evidencia será eliminada permanentemente.</p>
+          </div>
+          <div class="flex gap-3">
+            <button @click="showDeleteEvidModal = false"
+              :class="['flex-1 border text-[13px] font-semibold py-2.5 rounded-xl transition', isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50']">
+              Cancelar
+            </button>
+            <button @click="confirmDeleteEvidence"
+              class="flex-1 bg-red-500 text-white text-[13px] font-bold py-2.5 rounded-xl hover:bg-red-600 transition">
+              Sí, eliminar
+            </button>
           </div>
         </div>
       </div>
@@ -2003,7 +2055,7 @@ const profReviewCount = ref(0)
 const navItems = computed(() => [
   { name:'Inicio',              label:'Inicio',    iconSvg: SVG.home   },
   { name:'Perfil profesional',  label:'Perfil',    iconSvg: SVG.prof   },
-  { name:'Mis servicios',       label:'Servicios', iconSvg: SVG.svc    },
+  // { name:'Mis servicios',       label:'Servicios', iconSvg: SVG.svc    },
   { name:'Mis Trabajos',        label:'Trabajos',  iconSvg: SVG.cal,   badge: totalUnreadMessages.value || undefined },
   { name:'Calendario',          label:'Calendario',iconSvg: SVG.calDot },
   { divider: true },
@@ -2014,12 +2066,15 @@ const navItems = computed(() => [
   { name:'Configuración',       label:'Ajustes',   iconSvg: SVG.set    },
   { name:'Ayuda',               label:'Ayuda',     iconSvg: SVG.help   },
 ])
-
+const appLoading  = ref(true)
+const dashLoading = ref(true)
 const stats = reactive([
-  { label:'Reservas hoy',     value:'5',        iconSvg: SVG.cal,   iconBg:'bg-purple-50', iconColor:'#7c3aed', trend:20 },
-  { label:'Ingresos hoy',     value:'$320.000', iconSvg: SVG.money, iconBg:'bg-blue-50',   iconColor:'#2563ff', trend:15 },
-  { label:'Servicios activos',value:'8',        iconSvg: SVG.svc,   iconBg:'bg-teal-50',   iconColor:'#0891b2', link:'Ver mis servicios' },
-  { label:'Total reseñas',    value:'4.9',      iconSvg: SVG.star,  iconBg:'bg-amber-50',  iconColor:'#f59e0b', link:'Ver reseñas' },
+  { label:'Reservas hoy',     value:'—',         iconSvg: SVG.cal,   iconBg:'bg-purple-50', iconColor:'#7c3aed' },
+  { label:'Ingresos hoy',     value:'—', iconSvg: SVG.money, iconBg:'bg-blue-50',   iconColor:'#2563ff' },
+  // { label:'Servicios activos',value:'—',        iconSvg: SVG.svc,   iconBg:'bg-teal-50',   iconColor:'#0891b2', link:'Ver mis servicios' },
+  // { label:'Total reseñas',    value:'—',      iconSvg: SVG.star,  iconBg:'bg-amber-50',  iconColor:'#f59e0b', link:'Ver reseñas' },
+  { label:'Servicios activos',value:'—',        iconSvg: SVG.svc,   iconBg:'bg-teal-50',   iconColor:'#0891b2', link:'' },
+  { label:'Total reseñas',    value:'—',      iconSvg: SVG.star,  iconBg:'bg-amber-50',  iconColor:'#f59e0b', link:'' },
 ])
 
 // ─── Available requests ───────────────────────────────────────────────────────
@@ -2205,6 +2260,8 @@ const jobs                = ref([])
 const jobChatRequest      = ref(null)
 const chatModalOpen       = ref(false)
 const jobEvidences        = ref([])
+const showDeleteEvidModal = ref(false)
+const evidToDelete        = ref(null)
 const selectedJobForEvid  = ref(null)
 const ratingClientName    = ref('')
 
@@ -2384,12 +2441,7 @@ const monthPts = monthData.map((v, i) => ({
 const monthLine = monthPts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
 const monthFill = monthLine + ` L${monthPts[11].x},160 L${monthPts[0].x},160 Z`
 
-const allReservations = reactive([
-  { id:1, client:'María González',  service:'Limpieza',  date:'Hoy, 10am',   price:'80.000',  status:'Confirmada', iconSvg:SVG.check, iconColor:'#10b981', gradient:'linear-gradient(135deg,#d1fae5,#6ee7b7)' },
-  { id:2, client:'Laura Rodríguez', service:'Manicure',  date:'Hoy, 2pm',    price:'50.000',  status:'Confirmada', iconSvg:SVG.scis,  iconColor:'#db2777', gradient:'linear-gradient(135deg,#fce7f3,#fbcfe8)' },
-  { id:3, client:'Camilo Pérez',    service:'Clases',    date:'Mañana, 9am', price:'120.000', status:'Pendiente',  iconSvg:SVG.book,  iconColor:'#2563ff', gradient:'linear-gradient(135deg,#dbeafe,#93c5fd)' },
-  { id:4, client:'Ana Torres',      service:'Plomería',  date:'15 May',      price:'90.000',  status:'Completada', iconSvg:SVG.drop,  iconColor:'#0ea5e9', gradient:'linear-gradient(135deg,#e0f2fe,#bae6fd)' },
-])
+const allReservations = reactive([])
 
 const reservaClass = (s) => ({
   'Confirmada': 'bg-emerald-100 text-emerald-700',
@@ -2397,11 +2449,7 @@ const reservaClass = (s) => ({
   'Completada': 'bg-blue-100 text-blue-700',
 }[s] || 'bg-slate-100 text-slate-500')
 
-const myServices = reactive([
-  { id:1, name:'Limpieza a domicilio',  category:'Limpieza',  price_raw:50000, price:'50.000', rating:'4.9', iconSvg:SVG.check, iconColor:'#10b981', gradient:'linear-gradient(135deg,#d1fae5,#6ee7b7)', active:true  },
-  { id:2, name:'Manicure y pedicure',   category:'Belleza',   price_raw:35000, price:'35.000', rating:'4.8', iconSvg:SVG.scis,  iconColor:'#db2777', gradient:'linear-gradient(135deg,#fce7f3,#fbcfe8)', active:true  },
-  { id:3, name:'Clases personalizadas', category:'Educación', price_raw:60000, price:'60.000', rating:'4.9', iconSvg:SVG.book,  iconColor:'#2563ff', gradient:'linear-gradient(135deg,#dbeafe,#93c5fd)', active:false },
-])
+const myServices = reactive([])
 
 // ─── My services CRUD ─────────────────────────────────────────────────────────
 const showSvcModal  = ref(false)
@@ -2466,19 +2514,9 @@ const toggleSvcStatus = async (svc) => {
   } catch { svc.active = prev; showToast('Error al cambiar estado', 'error') }
 }
 
-const convs = ref([
-  { id:1, name:'María González',  initial:'M', color:'#10b981', last:'Perfecto, ahí estaré', time:'10:30', unread:2 },
-  { id:2, name:'Laura Rodríguez', initial:'L', color:'#db2777', last:'Muchas gracias!',       time:'09:15', unread:1 },
-  { id:3, name:'Camilo Pérez',    initial:'C', color:'#2563ff', last:'¿Puede el martes?',     time:'Ayer',  unread:0 },
-])
+const convs = ref([])
 
-const messages = ref([
-  { id:1, text:'Hola, confirmo cita para mañana.', mine:false, time:'10:15' },
-  { id:2, text:'Perfecto, ahí estaré.',            mine:true,  time:'10:18' },
-  { id:3, text:'¿Trae herramientas?',              mine:false, time:'10:20' },
-  { id:4, text:'Sí, llevo todo lo necesario.',     mine:true,  time:'10:22' },
-  { id:5, text:'Perfecto, ahí estaré.',            mine:false, time:'10:30' },
-])
+const messages = ref([])
 
 const sendMsg = async () => {
   if (!msgText.value.trim()) return
@@ -2537,12 +2575,7 @@ watch(page, async (val) => {
 })
 
 const rawEarnings   = ref([])
-const incomeHistory = reactive([
-  { id:1, service:'Limpieza a domicilio',  client:'María G.',  date:'13 May 2026', amount:'$80.000'  },
-  { id:2, service:'Manicure y pedicure',   client:'Laura R.',  date:'12 May 2026', amount:'$50.000'  },
-  { id:3, service:'Clases personalizadas', client:'Camilo P.', date:'10 May 2026', amount:'$120.000' },
-  { id:4, service:'Plomería',              client:'Ana T.',    date:'08 May 2026', amount:'$90.000'  },
-])
+const incomeHistory = reactive([])
 
 const INCOME_MOBILE_PG = 5
 const incomeMobilePage = ref(1)
@@ -2844,7 +2877,8 @@ const calCells = computed(() => {
   const offset   = (firstDay + 6) % 7               // Monday-first offset
   const daysInMonth  = new Date(y, m + 1, 0).getDate()
   const daysInPrev   = new Date(y, m, 0).getDate()
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
 
   const cells = []
   const total = Math.ceil((offset + daysInMonth) / 7) * 7
@@ -3065,6 +3099,21 @@ const submitEvidence = async () => {
   finally { evidSubmitting.value = false }
 }
 
+const deleteEvidence = (ev) => {
+  evidToDelete.value        = ev
+  showDeleteEvidModal.value = true
+}
+
+const confirmDeleteEvidence = async () => {
+  try {
+    await api.delete(`/professional/requests/${selectedJobForEvid.value.id}/evidences/${evidToDelete.value.id}`)
+    jobEvidences.value        = jobEvidences.value.filter(e => e.id !== evidToDelete.value.id)
+    showDeleteEvidModal.value = false
+    evidToDelete.value        = null
+    showToast('Evidencia eliminada', 'success')
+  } catch { showToast('Error al eliminar evidencia', 'error') }
+}
+
 // ─── Rating modal ─────────────────────────────────────────────────────────────
 const showRatingModal  = ref(false)
 const ratingRequestId  = ref(null)
@@ -3110,18 +3159,21 @@ onMounted(async () => {
     profForm.phone = authStore.user.phone ?? ''
     profForm.city  = authStore.user.city  ?? ''
     profForm.description = authStore.user.description ?? ''
+    appLoading.value = false
   }
 
   // Dashboard stats
   try {
     const { data } = await professionalService.getDashboard()
     if (data) {
-      if (data.reservas_hoy !== undefined)       stats[0].value = String(data.reservas_hoy)
-      if (data.ingresos_hoy !== undefined)       stats[1].value = '$' + Number(data.ingresos_hoy).toLocaleString('es-CO')
-      if (data.servicios_activos !== undefined)  stats[2].value = String(data.servicios_activos)
-      if (data.promedio_reseñas !== undefined)   stats[3].value = String(data.promedio_reseñas)
+      const s = data.stats ?? data
+      if (s.reservas_hoy !== undefined)       stats[0].value = String(s.reservas_hoy)
+      if (s.ingresos_hoy !== undefined)       stats[1].value = '$' + Number(s.ingresos_hoy).toLocaleString('es-CO')
+      if (s.servicios_activos !== undefined)  stats[2].value = String(s.servicios_activos)
+      if (s.promedio_reseñas !== undefined)   stats[3].value = String(s.promedio_reseñas)
     }
   } catch { /* keep defaults */ }
+  finally { dashLoading.value = false }
 
   // Earnings + income history
   try {
@@ -3140,7 +3192,8 @@ onMounted(async () => {
           client:  p.client_name  ?? '—',
           date:    p.service_date ? new Date(p.service_date + 'T00:00:00').toLocaleDateString('es-CO') : '—',
           amount:  '$' + Number(p.net_amount ?? 0).toLocaleString('es-CO'),
-          status:  p.status ?? 'completed',
+          status:              p.status ?? 'completed',
+          disbursement_status: p.disbursement_status ?? 'pending',
         })))
       }
     }
