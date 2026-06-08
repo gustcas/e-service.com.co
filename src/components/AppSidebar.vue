@@ -3,21 +3,16 @@
     class="h-full flex flex-col py-6 px-5"
     :class="dark ? 'bg-[#071126] text-white' : 'bg-white text-slate-700'"
   >
-    <!-- Logo -->
-    <div class="flex items-center gap-2.5 mb-8 px-1">
-      <div
-        class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-        :class="dark ? 'bg-white/10' : 'bg-blue-50'"
-      >
-        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :stroke="dark ? '#93c5fd' : '#2563ff'">
-          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
+    <!-- Logo + Mobile close -->
+    <div class="flex items-center justify-between mb-8 px-1">
+      <div class="flex items-center gap-2.5">
+        <img src="/images/logo-sin-letras.png" alt="e-service" class="h-10 w-auto object-contain flex-shrink-0" />
+        <div class="flex-1 min-w-0">
+          <h1 class="text-[15px] font-black leading-tight" :class="dark ? 'text-white' : 'text-[#2563ff]'">e-service</h1>
+          <p class="text-[9px] font-bold uppercase tracking-wider leading-tight" :class="dark ? 'text-cyan-400' : 'text-cyan-500'">Profesionales a tu alcance</p>
+        </div>
       </div>
-      <div class="flex-1 min-w-0">
-        <h1 class="text-[15px] font-black leading-tight" :class="dark ? 'text-white' : 'text-[#2563ff]'">e-service</h1>
-        <p class="text-[9px] font-bold uppercase tracking-wider leading-tight" :class="dark ? 'text-cyan-400' : 'text-cyan-500'">Profesionales a tu alcance</p>
-      </div>
+
       <!-- Mobile close button -->
       <button
         v-if="showClose"

@@ -219,6 +219,14 @@
             <textarea v-model="catForm.description" rows="3" placeholder="Describe esta categoría..."
               class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition resize-none" />
           </div>
+          <div v-if="asecalidadAccounts.length > 0">
+            <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Empresa ASECALIDAD</label>
+            <select v-model="catForm.asecalidad_account_id"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition">
+              <option :value="null">Sin asignar</option>
+              <option v-for="acc in asecalidadAccounts" :key="acc.id" :value="acc.id">{{ acc.entity_name }}</option>
+            </select>
+          </div>
           <p v-if="formErr" class="text-[12px] text-red-600 bg-red-50 rounded-xl px-3 py-2">{{ formErr }}</p>
           <div class="flex gap-3 pt-2">
             <button @click="showCatModal=false" class="flex-1 border border-slate-200 text-slate-600 text-[13px] font-semibold py-2.5 rounded-xl hover:bg-slate-50 transition">Cancelar</button>
@@ -242,6 +250,16 @@
             <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Nombre del servicio</label>
             <input v-model="svcForm.name" type="text" placeholder="Ej: Instalación de tomacorrientes"
               class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition" />
+          </div>
+          <div>
+            <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Tipo de formulario</label>
+            <select v-model="svcForm.form_type"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition bg-white">
+              <option value="presencial">Presencial</option>
+              <option value="virtual">Virtual</option>
+              <option value="certificacion_virtual">Certificación Virtual</option>
+              <option value="certificacion_presencial">Certificación Presencial</option>
+            </select>
           </div>
           <div>
             <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Precio ($)</label>
@@ -295,6 +313,7 @@ import { ref, computed, onMounted } from 'vue'
 import categoryService from '@/services/categoryService'
 import serviceService  from '@/services/serviceService'
 import { useAdminToast } from './useAdminToast'
+import api from '@/services/api'
 
 const { showToast } = useAdminToast()
 
@@ -360,13 +379,21 @@ const fetchCategories = async () => {
 // ── Modal Categoría ────────────────────────────────────────────────────────────
 const showCatModal = ref(false)
 const editingCat   = ref(null)
-const catForm      = ref({ name: '', description: '' })
+const catForm = ref({ name: '', description: '', asecalidad_account_id: null })
 const saving       = ref(false)
 const formErr      = ref('')
+const asecalidadAccounts  = ref([])
+
+const loadAsecalidadAccounts = async () => {
+  try {
+    const { data } = await api.get('/admin/payout-accounts')
+    asecalidadAccounts.value = data.accounts.filter(a => a.entity_type === 'asecalidad' && a.is_active)
+  } catch { asecalidadAccounts.value = [] }
+}
 
 const openCatModal = cat => {
   editingCat.value = cat
-  catForm.value    = { name: cat?.name ?? '', description: cat?.description ?? '' }
+  catForm.value = { name: cat?.name ?? '', description: cat?.description ?? '', asecalidad_account_id: cat?.asecalidad_account_id ?? null }
   formErr.value    = ''
   showCatModal.value = true
 }
@@ -393,14 +420,14 @@ const saveCategory = async () => {
 const showSvcModal  = ref(false)
 const editingSvc    = ref(null)
 const activeCat     = ref(null)
-const svcForm       = ref({ name:'', price:0, allies_percentage:0, payment_gateway_commission:0, imavicx_commission:0, asecalidad_commission:0, maintenance_percentage:0 })
+const svcForm = ref({ name:'', price:0, form_type:'presencial', allies_percentage:0, payment_gateway_commission:0, imavicx_commission:0, asecalidad_commission:0, maintenance_percentage:0 })
 
 const openSvcModal = (svc, cat) => {
   editingSvc.value  = svc
   activeCat.value   = cat
   svcForm.value     = svc
-    ? { name:svc.name, price:svc.price, allies_percentage:svc.allies_percentage??0, payment_gateway_commission:svc.payment_gateway_commission??0, imavicx_commission:svc.imavicx_commission??0, asecalidad_commission:svc.asecalidad_commission??0, maintenance_percentage:svc.maintenance_percentage??0 }
-    : { name:'', price:0, allies_percentage:0, payment_gateway_commission:0, imavicx_commission:0, asecalidad_commission:0, maintenance_percentage:0 }
+    ? { name:svc.name, price:svc.price, form_type:svc.form_type??'presencial', allies_percentage:svc.allies_percentage??0, payment_gateway_commission:svc.payment_gateway_commission??0, imavicx_commission:svc.imavicx_commission??0, asecalidad_commission:svc.asecalidad_commission??0, maintenance_percentage:svc.maintenance_percentage??0 }
+    : { name:'', price:0, form_type:'presencial', allies_percentage:0, payment_gateway_commission:0, imavicx_commission:0, asecalidad_commission:0, maintenance_percentage:0 }
   formErr.value     = ''
   showSvcModal.value = true
 }
@@ -450,7 +477,11 @@ const confirmDelete = async () => {
   } finally { saving.value = false }
 }
 
-onMounted(fetchCategories)
+onMounted(async () => {
+  await fetchCategories()
+  loadAsecalidadAccounts()
+})
+
 </script>
 
 <style scoped>
