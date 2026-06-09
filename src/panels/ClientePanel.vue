@@ -218,8 +218,11 @@
 
               <!-- Service type -->
               <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="#2563ff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" v-html="SVG.clip"/>
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                  :style="{ background: iconOptions.find(x => x.key === req.icon_key)?.bg ?? '#eff6ff' }">
+                  <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+                    :stroke="iconOptions.find(x => x.key === req.icon_key)?.color ?? '#2563ff'"
+                    v-html="iconOptions.find(x => x.key === req.icon_key)?.svg ?? SVG.clip"/>
                 </div>
                 <span class="font-bold text-[14px] text-[#0f172a]">{{ req.name }}</span>
               </div>
@@ -923,8 +926,8 @@
               <div v-for="svc in servicesByCategory" :key="svc.id"
                 @click="openServiceRequest(svc)"
                 class="border border-slate-100 rounded-2xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/50 hover:-translate-y-0.5 transition-all">
-                <div class="w-10 h-10 rounded-xl mb-3 flex items-center justify-center" :style="{background: selectedCategoryModal?.iconBg}">
-                  <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" :stroke="selectedCategoryModal?.iconColor" v-html="selectedCategoryModal?.iconSvg" />
+                <div class="w-10 h-10 rounded-xl mb-3 flex items-center justify-center" :style="{background: svc.iconBg || selectedCategoryModal?.iconBg}">
+                  <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" :stroke="svc.iconColor || selectedCategoryModal?.iconColor" v-html="svc.iconSvg || selectedCategoryModal?.iconSvg" />
                 </div>
                 <p class="text-[13px] font-bold text-[#0f172a]">{{ svc.name }}</p>
                 <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{{ svc.description || 'Servicio profesional a domicilio' }}</p>
@@ -1635,6 +1638,7 @@
 
 <script setup>
 import { ref, computed, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { iconOptions } from '@/composables/useIcons'
 import { useFormValidation } from '@/composables/useFormValidation'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
@@ -1730,7 +1734,11 @@ const catStyleDefaults = [
 ]
 
 
-const catStyleFor = (name) => {
+const catStyleFor = (name, iconKey = null) => {
+  if (iconKey) {
+    const found = iconOptions.find(i => i.key === iconKey)
+    if (found) return { iconSvg: found.svg, iconColor: found.color, iconBg: found.bg }
+  }
   const lower = name.toLowerCase()
   return catStyleDefaults.find(d => lower.includes(d.name.toLowerCase())) ?? catStyleDefaults[0]
 }
@@ -2968,6 +2976,7 @@ const loadRequests = async () => {
         completed_at:  r.completed_at ?? null,
         category_name: r.category_name ?? r.category?.name ?? '',
         form_type:     r.form_type ?? null,
+        icon_key:      r.icon_key ?? null,
       }))
     }
   } catch { /* keep mock data */ }
@@ -3019,7 +3028,7 @@ onMounted(async () => {
   try {
     const { data } = await categoryService.getAllProfesional()
     if (Array.isArray(data) && data.length) {
-     cats.value = data.map(c => ({ ...catStyleFor(c.name), id: c.id, name: c.name }))
+    cats.value = data.map(c => ({ ...catStyleFor(c.name, c.icon_key), id: c.id, name: c.name }))
       catsLoading.value = false
     }
   } catch { /* keep defaults */ }
@@ -3037,7 +3046,7 @@ onMounted(async () => {
         'linear-gradient(135deg,#f5f3ff,#ddd6fe)',
       ]
       allServices.value = data.map((s, i) => {
-        const style = catStyleFor(s.category_name ?? s.name)
+        const style = catStyleFor(s.category_name ?? s.name, s.icon_key ?? null)
         return {
           id:            s.id,
           name:          s.name,
@@ -3046,8 +3055,10 @@ onMounted(async () => {
           price_raw:     Number(s.price || 0),
           category_id:   s.category_id ?? null,
           category_name: s.category_name ?? '',
+          icon_key:      s.icon_key ?? null,
           iconSvg:       style.iconSvg,
           iconColor:     style.iconColor,
+          iconBg:        style.iconBg,
           gradient:      gradients[i % gradients.length],
           form_type:     s.form_type ?? 'presencial',
           rating:        4.9,
