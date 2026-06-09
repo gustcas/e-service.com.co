@@ -82,8 +82,12 @@
           :class="expandedIds.includes(cat.id) ? 'bg-blue-50/50' : ''"
           @click="toggleExpand(cat.id)">
           <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-xl bg-[#0d4f5c] flex items-center justify-center text-white font-black text-base flex-shrink-0">
-              {{ cat.name.charAt(0).toUpperCase() }}
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              :style="{ background: catIcon(cat)?.bg ?? '#0d4f5c' }">
+              <svg v-if="catIcon(cat)" viewBox="0 0 24 24" class="w-5 h-5" fill="none"
+                stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+                :stroke="catIcon(cat)?.color" v-html="catIcon(cat)?.svg" />
+              <span v-else class="text-white font-black text-base">{{ cat.name.charAt(0).toUpperCase() }}</span>
             </div>
             <div class="min-w-0 flex-1">
               <p class="font-bold text-[#0f172a] text-[14px]">{{ cat.name }}</p>
@@ -209,6 +213,11 @@
             <p class="font-black text-[#0f172a]">{{ editingCat ? 'Editar categoría' : 'Nueva categoría' }}</p>
             <button @click="showCatModal=false" class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition text-lg">×</button>
           </div>
+          <!-- Selector de icono -->
+          <div class="flex flex-col items-center py-2">
+            <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-3">Icono de la categoría</label>
+            <IconPicker v-model="catForm.icon_key" />
+          </div>
           <div>
             <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Nombre</label>
             <input v-model="catForm.name" type="text" placeholder="Ej: Hogar y Mantenimiento"
@@ -219,6 +228,7 @@
             <textarea v-model="catForm.description" rows="3" placeholder="Describe esta categoría..."
               class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition resize-none" />
           </div>
+          
           <div v-if="asecalidadAccounts.length > 0">
             <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Empresa ASECALIDAD</label>
             <select v-model="catForm.asecalidad_account_id"
@@ -245,6 +255,10 @@
           <div class="flex items-center justify-between">
             <p class="font-black text-[#0f172a]">{{ editingSvc ? 'Editar servicio' : 'Nuevo servicio' }}</p>
             <button @click="showSvcModal=false" class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition text-lg">×</button>
+          </div>
+          <div class="flex flex-col items-center py-2">
+            <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-3">Icono del servicio</label>
+            <IconPicker v-model="svcForm.icon_key" />
           </div>
           <div>
             <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Nombre del servicio</label>
@@ -314,14 +328,18 @@ import categoryService from '@/services/categoryService'
 import serviceService  from '@/services/serviceService'
 import { useAdminToast } from './useAdminToast'
 import api from '@/services/api'
+import IconPicker from '@/components/IconPicker.vue'
+import { iconOptions } from '@/composables/useIcons'
 
 const { showToast } = useAdminToast()
+const catIcon = (cat) => cat.icon_key ? iconOptions.find(i => i.key === cat.icon_key) ?? null : null
 
 // ── Estado ─────────────────────────────────────────────────────────────────────
 const categories  = ref([])
 const loading     = ref(false)
 const search      = ref('')
 const expandedIds = ref([])
+
 
 const commissionFields = [
   { key: 'allies_percentage',          label: 'Aliados %' },
@@ -379,7 +397,7 @@ const fetchCategories = async () => {
 // ── Modal Categoría ────────────────────────────────────────────────────────────
 const showCatModal = ref(false)
 const editingCat   = ref(null)
-const catForm = ref({ name: '', description: '', asecalidad_account_id: null })
+const catForm = ref({ name: '', description: '', icon_key: null, asecalidad_account_id: null })
 const saving       = ref(false)
 const formErr      = ref('')
 const asecalidadAccounts  = ref([])
@@ -393,7 +411,7 @@ const loadAsecalidadAccounts = async () => {
 
 const openCatModal = cat => {
   editingCat.value = cat
-  catForm.value = { name: cat?.name ?? '', description: cat?.description ?? '', asecalidad_account_id: cat?.asecalidad_account_id ?? null }
+  catForm.value = { name: cat?.name ?? '', description: cat?.description ?? '', icon_key: cat?.icon_key ?? null, asecalidad_account_id: cat?.asecalidad_account_id ?? null }
   formErr.value    = ''
   showCatModal.value = true
 }
@@ -420,14 +438,14 @@ const saveCategory = async () => {
 const showSvcModal  = ref(false)
 const editingSvc    = ref(null)
 const activeCat     = ref(null)
-const svcForm = ref({ name:'', price:0, form_type:'presencial', allies_percentage:0, payment_gateway_commission:0, imavicx_commission:0, asecalidad_commission:0, maintenance_percentage:0 })
+const svcForm = ref({ name:'', icon_key: null, price:0, form_type:'presencial', allies_percentage:0, payment_gateway_commission:0, imavicx_commission:0, asecalidad_commission:0, maintenance_percentage:0 })
 
 const openSvcModal = (svc, cat) => {
   editingSvc.value  = svc
   activeCat.value   = cat
-  svcForm.value     = svc
-    ? { name:svc.name, price:svc.price, form_type:svc.form_type??'presencial', allies_percentage:svc.allies_percentage??0, payment_gateway_commission:svc.payment_gateway_commission??0, imavicx_commission:svc.imavicx_commission??0, asecalidad_commission:svc.asecalidad_commission??0, maintenance_percentage:svc.maintenance_percentage??0 }
-    : { name:'', price:0, form_type:'presencial', allies_percentage:0, payment_gateway_commission:0, imavicx_commission:0, asecalidad_commission:0, maintenance_percentage:0 }
+  svcForm.value = svc
+    ? { icon_key: svc.icon_key ?? null, name: svc.name, price: svc.price, form_type: svc.form_type ?? 'presencial', allies_percentage: svc.allies_percentage ?? 0, payment_gateway_commission: svc.payment_gateway_commission ?? 0, imavicx_commission: svc.imavicx_commission ?? 0, asecalidad_commission: svc.asecalidad_commission ?? 0, maintenance_percentage: svc.maintenance_percentage ?? 0 }
+    : { icon_key: null, name: '', price: 0, form_type: 'presencial', allies_percentage: 0, payment_gateway_commission: 0, imavicx_commission: 0, asecalidad_commission: 0, maintenance_percentage: 0 }
   formErr.value     = ''
   showSvcModal.value = true
 }
