@@ -113,7 +113,7 @@
               <svg viewBox="0 0 560 180" class="w-full" style="height:180px" preserveAspectRatio="none">
                 <!-- Grid -->
                 <line v-for="(gy,i) in uGridY" :key="i" x1="40" x2="550" :y1="gy" :y2="gy" stroke="#f1f5f9" stroke-width="1"/>
-                <text v-for="(lbl,i) in ['8k','6k','4k','2k','0']" :key="i" :x="36" :y="uGridY[i]+4" text-anchor="end" fill="#94a3b8" font-size="10">{{ lbl }}</text>
+                <text v-for="(lbl,i) in [uYMax, Math.round(uYMax*0.75), Math.round(uYMax*0.5), Math.round(uYMax*0.25), 0]" :key="i" :x="36" :y="uGridY[i]+4" text-anchor="end" fill="#94a3b8" font-size="10">{{ lbl }}</text>
                 <!-- Series lines -->
                 <path v-for="s in userSeries" :key="s.label" :d="s.path" fill="none" :stroke="s.color" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 <template v-for="s in userSeries" :key="s.label">
@@ -157,7 +157,7 @@
               <svg viewBox="0 0 560 180" class="w-full" style="height:180px" preserveAspectRatio="none">
                 <!-- Grid -->
                 <line v-for="(gy,i) in barGridY" :key="i" x1="44" x2="550" :y1="gy" :y2="gy" stroke="#f1f5f9" stroke-width="1"/>
-                <text v-for="(lbl,i) in ['$40M','$30M','$20M','$10M','$0']" :key="i" :x="40" :y="barGridY[i]+4" text-anchor="end" fill="#94a3b8" font-size="10">{{ lbl }}</text>
+                <text v-for="(lbl,i) in ['Max','75%','50%','25%','$0']" :key="i" :x="40" :y="barGridY[i]+4" text-anchor="end" fill="#94a3b8" font-size="10">{{ lbl }}</text>
                 <!-- Bars -->
                 <rect v-for="(b,i) in barItems" :key="i"
                   :x="b.x - 20" :y="b.y" width="40" :height="160 - b.y"
@@ -373,6 +373,8 @@ const navItems = [
 
 // ─── Dashboard real API ───────────────────────────────────────────────────────
 const dashLoading = ref(false)
+const usersByDayData  = ref([])
+const incomeByDayData = ref([])
 const dashRaw = ref({
   totalUsers: 0, totalClients: 0, totalProfessionals: 0,
   activeUsers: 0, inactiveUsers: 0, pendingProfessionals: 0,
@@ -415,6 +417,8 @@ const fetchDashStats = async () => {
         totalCollected:       n('totalCollected',        'total_collected',       'revenue_total', 'collected'),
         totalServices:        n('totalServices',         'total_services',        'services'),
       })
+      if (s.usersByDay)  usersByDayData.value  = s.usersByDay
+      if (s.incomeByDay) incomeByDayData.value = s.incomeByDay
     }
 
     // Categorías para donut1
@@ -444,43 +448,50 @@ const stats = computed(() => [
 
 // ─── Chart helpers ───────────────────────────────────────────────
 // Shared point calculator
-const uLP = 44, uTP = 20, uW = 506, uH = 130, uYMax = 8000
+const uLP = 44, uTP = 20, uW = 506, uH = 130
+const uYMax = computed(() => {
+  if (!usersByDayData.value.length) return 10
+  return Math.max(...usersByDayData.value.map(d => d.count), 10)
+})
 function uPts(data, idx) {
-  return { x: uLP + (idx / (data.length - 1)) * uW, y: uTP + (1 - data[idx] / uYMax) * uH }
+  return { x: uLP + (idx / (data.length - 1)) * uW, y: uTP + (1 - data[idx] / uYMax.value) * uH }
 }
+const uGridY = [20, 52, 85, 117, 150]
 
-const uXLabels = ['9 May','10 May','11 May','12 May','13 May','14 May','15 May']
-const uGridY   = [20, 52, 85, 117, 150]
+const uXLabels = computed(() =>
+  usersByDayData.value.length ? usersByDayData.value.map(d => d.date) : ['','','','','','','']
+)
 
-const userData = {
-  nuevos:    [2000, 2800, 3200, 3500, 4800, 6200, 7500],
-  activos:   [4000, 4800, 4200, 5300, 5800, 4900, 6300],
-  inactivos: [500,  800,  1500, 2000, 2500, 2800, 3800],
-}
+const userSeries = computed(() => {
+  const counts = usersByDayData.value.length
+    ? usersByDayData.value.map(d => d.count)
+    : [0, 0, 0, 0, 0, 0, 0]
+  return [
+    { label: 'Nuevos', color: '#2563ff', data: counts, path: makePath(counts), pts: counts.map((_, i) => uPts(counts, i)) },
+  ]
+})
 
 function makePath(data) {
+  if (!data.length || data.every(v => v === 0)) return ''
   return data.map((v, i) => {
     const p = uPts(data, i)
     return `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`
   }).join(' ')
 }
 
-const userSeries = [
-  { label:'Nuevos',    color:'#2563ff', data: userData.nuevos,    path: makePath(userData.nuevos),    pts: userData.nuevos.map((_,i) => uPts(userData.nuevos, i)) },
-  { label:'Activos',   color:'#10b981', data: userData.activos,   path: makePath(userData.activos),   pts: userData.activos.map((_,i) => uPts(userData.activos, i)) },
-  { label:'Inactivos', color:'#f43f5e', data: userData.inactivos, path: makePath(userData.inactivos), pts: userData.inactivos.map((_,i) => uPts(userData.inactivos, i)) },
-]
-
-// Bar chart
-const barValues = [25, 30, 28, 32, 22, 28, 35] // millions
-const barMax = 40, bLP = 48, bTP = 10, bW = 502, bH = 150
+// Bar chart — ingresos reales
+const bLP = 48, bTP = 10, bW = 502, bH = 150
 const barGridY = [10, 47, 85, 122, 160]
 
-const barItems = barValues.map((v, i) => ({
-  x: bLP + (i / (barValues.length - 1)) * bW,
-  y: bTP + (1 - v / barMax) * bH,
-  label: ['9 May','10 May','11 May','12 May','13 May','14 May','15 May'][i],
-}))
+const barItems = computed(() => {
+  const days = incomeByDayData.value.length ? incomeByDayData.value : Array(7).fill({ date: '', amount: 0 })
+  const maxVal = Math.max(...days.map(d => d.amount), 1)
+  return days.map((d, i) => ({
+    x: bLP + (i / (days.length - 1)) * bW,
+    y: bTP + (1 - d.amount / maxVal) * bH,
+    label: d.date,
+  }))
+})
 
 // Donut 1 — distribución servicios (datos reales por categoría)
 const donut1 = computed(() => {

@@ -335,7 +335,12 @@
               <div class="card-body-cols">
                 <div class="card-body-left">
                   <div class="job-head">
-                    <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
+                    <div class="svc-icon"
+                      :style="{ background: iconOptions.find(x => x.key === job.icon_key)?.bg ?? '#eff6ff', borderRadius: '8px', padding: '3px' }">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"
+                        :stroke="iconOptions.find(x => x.key === job.icon_key)?.color ?? '#2563ff'"
+                        v-html="iconOptions.find(x => x.key === job.icon_key)?.svg ?? SVG.svc" />
+                    </div>
                     <span class="job-svc">{{ job.service_name }}</span>
                   </div>
                   <div class="job-budget">${{ Number(job.budget).toLocaleString('es-CO') }}</div>
@@ -580,9 +585,9 @@
         <!-- ===== MIS INGRESOS ===== -->
         <template v-else-if="page === 'Mis ingresos'">
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard iconSvg='<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>' iconBg="bg-emerald-50" iconColor="#10b981" value="$3.240.000" label="Total este mes"  :trend="18" :dark="isDark" />
-            <StatCard iconSvg='<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>' iconBg="bg-blue-50"    iconColor="#2563ff" value="$840.000"  label="Última semana"  :trend="12" :dark="isDark" />
-            <StatCard iconSvg='<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>'                   iconBg="bg-amber-50"  iconColor="#f59e0b" value="$120.000"  label="Pendiente" :dark="isDark" />
+            <StatCard iconSvg='<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>' iconBg="bg-emerald-50" iconColor="#10b981" :value="incomeStats.thisMonth" label="Total este mes"  :dark="isDark" />
+            <StatCard iconSvg='<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>' iconBg="bg-blue-50"    iconColor="#2563ff" :value="incomeStats.thisWeek"  label="Última semana" :dark="isDark" />
+            <StatCard iconSvg='<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>'                   iconBg="bg-amber-50"  iconColor="#f59e0b" :value="incomeStats.pending"   label="Pendiente"     :dark="isDark" />
           </div>
           <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
@@ -1965,6 +1970,7 @@ html.dark .prp-root .btn-modal-cerrar { background: rgba(255,255,255,0.1) !impor
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { iconOptions } from '@/composables/useIcons'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import professionalService from '@/services/professionalService'
@@ -2028,6 +2034,11 @@ const SVG = {
 const totalUnreadMessages = computed(() => Object.values(unreadChats.value).reduce((s, n) => s + n, 0))
 
 // ── Notificaciones panel ──────────────────────────────────────────────────────
+const incomeStats = reactive({
+  thisMonth: '$0',
+  thisWeek:  '$0',
+  pending:   '$0',
+})
 const notifPanelOpen = ref(false)
 const notifBtnRef    = ref(null)
 const notifItems     = computed(() =>
@@ -2493,8 +2504,9 @@ const saveSvc = async () => {
         price:       Number(svcForm.price).toLocaleString('es-CO'),
         category:    svcForm.category,
         rating:      '—',
-        iconSvg:     SVG.svc,
-        iconColor:   '#2563ff',
+        iconSvg:     (() => { const ic = iconOptions.find(x => x.key === s.icon_key); return ic ? ic.svg : SVG.svc })(),
+        iconColor:   (() => { const ic = iconOptions.find(x => x.key === s.icon_key); return ic ? ic.color : '#2563ff' })(),
+        iconBg:      (() => { const ic = iconOptions.find(x => x.key === s.icon_key); return ic ? ic.bg : '#eff6ff' })(),
         gradient:    'linear-gradient(135deg,#dbeafe,#93c5fd)',
         active:      svcForm.active,
       })
@@ -2623,9 +2635,10 @@ const buildFill = (pts, yBot = 170) => {
 const statsMonthValues = computed(() => {
   const year   = new Date().getFullYear()
   const months = Array(12).fill(0)
-  rawEarnings.value.forEach(e => {
-    if (!e.service_date) return
-    const d = new Date(e.service_date + 'T00:00:00')
+rawEarnings.value.forEach(e => {
+    if (!e.service_date || e.status !== 'completed') return
+    const dateStr = e.service_date.replace(' ', 'T').slice(0, 10)
+    const d = new Date(dateStr + 'T00:00:00')
     if (d.getFullYear() !== year) return
     months[d.getMonth()] += Number(e.net_amount ?? 0)
   })
@@ -2644,9 +2657,10 @@ const statsWeekValues = computed(() => {
   monday.setDate(now.getDate() - dow)
   monday.setHours(0, 0, 0, 0)
   const days = Array(7).fill(0)
-  rawEarnings.value.forEach(e => {
-    if (!e.service_date) return
-    const d    = new Date(e.service_date + 'T00:00:00')
+rawEarnings.value.forEach(e => {
+    if (!e.service_date || e.status !== 'completed') return
+    const dateStr = e.service_date.replace(' ', 'T').slice(0, 10)
+    const d    = new Date(dateStr + 'T00:00:00')
     const diff = Math.round((d - monday) / 86400000)
     if (diff >= 0 && diff < 7) days[diff] += Number(e.net_amount ?? 0)
   })
@@ -3180,9 +3194,12 @@ onMounted(async () => {
     const { data } = await api.get('/professional/earnings')
     if (data) {
       if (data.summary) {
-        profSummary[0].value = String(data.summary.total_jobs    ?? 0)
-        profSummary[1].value = '$' + Number(data.summary.total_earned  ?? 0).toLocaleString('es-CO')
-        profSummary[2].value = String(data.summary.pending_jobs  ?? 0)
+        profSummary[0].value    = String(data.summary.total_jobs    ?? 0)
+        profSummary[1].value    = '$' + Number(data.summary.total_earned  ?? 0).toLocaleString('es-CO')
+        profSummary[2].value    = String(data.summary.pending_jobs  ?? 0)
+        incomeStats.thisMonth   = '$' + Number(data.summary.total_this_month ?? 0).toLocaleString('es-CO')
+        incomeStats.thisWeek    = '$' + Number(data.summary.total_this_week  ?? 0).toLocaleString('es-CO')
+        incomeStats.pending     = '$' + Number(data.summary.total_pending    ?? 0).toLocaleString('es-CO')
       }
       if (Array.isArray(data.earnings) && data.earnings.length) {
         rawEarnings.value = data.earnings
@@ -3190,7 +3207,7 @@ onMounted(async () => {
           id:      p.id,
           service: p.service_name ?? '—',
           client:  p.client_name  ?? '—',
-          date:    p.service_date ? new Date(p.service_date + 'T00:00:00').toLocaleDateString('es-CO') : '—',
+          date:    p.service_date ? new Date(p.service_date.replace(' ', 'T')).toLocaleDateString('es-CO') : '—',
           amount:  '$' + Number(p.net_amount ?? 0).toLocaleString('es-CO'),
           status:              p.status ?? 'completed',
           disbursement_status: p.disbursement_status ?? 'pending',
