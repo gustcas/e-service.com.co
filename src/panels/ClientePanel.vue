@@ -989,13 +989,13 @@
             <template v-if="currentStepName === 'Descripción'">
               <div>
                 <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">¿Qué necesitas? <span class="text-slate-300 font-normal normal-case">(Opcional)</span></label>
-                <textarea v-model="form.description" rows="4" placeholder="Describe detalladamente lo que necesitas. Ej: limpieza de 2 habitaciones, baño y cocina..."
+                <textarea v-model="form.description" rows="4" placeholder=""
                   class="w-full border border-slate-200 rounded-xl px-4 py-3 text-[13px] outline-none focus:border-blue-400 transition bg-slate-50 focus:bg-white resize-none" />
               </div>
               <div v-if="isCapacitacion">
                 <!-- Selector de ciclo  -->
-                <template v-if="isCapacitacion">
-                  <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-2">Ciclo de capacitación</label>
+                <template v-if="hasCycle">
+                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-2">Ciclo de capacitación</label>
                   <div class="flex gap-2 mb-4">
                     <button
                       v-for="c in [1, 2, 3]" :key="c"
@@ -1012,12 +1012,14 @@
                 </template>
                 <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-2">Número de personas</label>
                 <div class="flex items-center gap-4">
-                  <button @click="form.people_count = Math.max(1, form.people_count - 1)"
-                    class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition font-bold text-lg">−</button>
+                  <button @click="form.people_count = Math.max(minParticipants, form.people_count - 1)"
+                    :disabled="form.people_count <= minParticipants"
+                    class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition font-bold text-lg disabled:opacity-40">−</button>
                   <span class="text-xl font-black text-[#0f172a] min-w-[2rem] text-center">{{ form.people_count }}</span>
-                  <button @click="form.people_count++"
-                    class="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 hover:bg-blue-200 transition font-bold text-lg">+</button>
-                  <span class="text-[13px] text-slate-400">personas</span>
+                  <button @click="form.people_count = Math.min(12, form.people_count + 1)"
+                    :disabled="form.people_count >= 12"
+                    class="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 hover:bg-blue-200 transition font-bold text-lg disabled:opacity-40">+</button>
+                  <span class="text-[13px] text-slate-400">Max. 12 Personas</span>
                 </div>
                 <div class="mt-4 space-y-2">
                   <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Nombres de los participantes</p>
@@ -1145,10 +1147,10 @@
                 </div>
                 <p class="text-[11px] text-slate-400 mt-1">Horario disponible: 6:00 am – 9:00 pm</p>
               </div>
-              <div class="bg-blue-50 rounded-xl p-4 text-[13px] text-blue-700">
+              <!-- <div class="bg-blue-50 rounded-xl p-4 text-[13px] text-blue-700">
                 <p class="font-bold mb-1">💡 Recuerda</p>
                 <p>El profesional confirmará disponibilidad en el horario seleccionado. Puedes cancelar hasta 2 horas antes sin cargo.</p>
-              </div>
+              </div> -->
             </template>
 
             <!-- PASO: Confirmar -->
@@ -1673,6 +1675,8 @@ const chatModal  = reactive({ open: false, requestId: null, otherName: '', servi
 const codeModal  = reactive({ open: false, req: null })
 
 const today = new Date().toLocaleDateString('es-CO', { weekday:'long', year:'numeric', month:'long', day:'numeric' })
+const minParticipants = computed(() => selectedService.value?.form_type === 'certificacion_presencial' ? 4 : 1)
+const hasCycle = computed(() => ['certificacion_virtual', 'certificacion_presencial'].includes(selectedService.value?.form_type ?? ''))
 
 // ─── SVG paths ───────────────────────────────────────────────────────────────
 const SVG = {
@@ -1872,21 +1876,20 @@ const openChatWithPro = (req) => {
   })
 }
 
-const isCapacitacionReq  = (req) => ['certificacion_virtual', 'certificacion_presencial'].includes(req.form_type ?? '') || /capacit/i.test(req.category_name ?? '')
-const isSaneamientoReq   = (req) => /saneamiento/i.test(req.category_name ?? req.name ?? '')
+const isCapacitacionReq = (req) => ['certificacion_virtual', 'certificacion_presencial'].includes(req.form_type ?? '') || /capacit/i.test(req.category_name ?? '')
+const isSaneamientoReq = (req) => /saneamiento/i.test(req.category_name ?? req.name ?? '')
 
 const downloadActa = async (req) => {
   try {
-    const docType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     const downloads = [
-      { endpoint: 'plan',  name: `Plan_Capacitacion_${req.num}.docx` },
-      { endpoint: 'eval',  name: `Evaluacion_${req.num}.docx` },
-      { endpoint: 'video', name: `Video_${req.num}.docx` },
+      { endpoint: 'plan',  name: `Plan_Capacitacion_${req.num}.pdf` },
+      { endpoint: 'eval',  name: `Evaluacion_${req.num}.pdf` },
+      { endpoint: 'video', name: `Video_${req.num}.pdf` },
     ]
     for (const doc of downloads) {
       try {
         const res = await api.get(`/client/requests/${req.id}/certification-document/${doc.endpoint}`, { responseType: 'blob' })
-        const url = URL.createObjectURL(new Blob([res.data], { type: docType }))
+        const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
         const a   = document.createElement('a'); a.href = url
         a.download = doc.name; a.click(); URL.revokeObjectURL(url)
         await new Promise(r => setTimeout(r, 500))
@@ -2346,16 +2349,16 @@ const form = reactive({
   payment_amount:    0,
 })
 
-const isVirtual               = computed(() => ['virtual', 'certificacion_virtual'].includes(selectedService.value?.form_type ?? ''))
-const isCapacitacion          = computed(() => ['certificacion_virtual', 'certificacion_presencial'].includes(selectedService.value?.form_type ?? ''))
-const isSaneamiento           = computed(() => selectedCategoryModal.value?.name?.toLowerCase().includes('saneamiento') ?? false)
+const isVirtual = computed(() => ['virtual', 'certificacion_virtual', 'virtual_participantes'].includes(selectedService.value?.form_type ?? ''))
+const isCapacitacion = computed(() => ['certificacion_virtual', 'certificacion_presencial', 'presencial_participantes', 'virtual_participantes'].includes(selectedService.value?.form_type ?? ''))
+const isSaneamiento = computed(() => selectedCategoryModal.value?.name?.toLowerCase().includes('saneamiento') ?? false)
 
 
 const visibleSteps = computed(() => {
   const ft    = selectedService.value?.form_type ?? 'presencial'
   const steps = ['Descripción']
-  if (['virtual', 'certificacion_virtual', 'certificacion_presencial'].includes(ft) || isSaneamiento.value) steps.push('Empresa')
-  if (ft === 'presencial' && !isSaneamiento.value) { steps.push('Ubicación'); steps.push('Fecha y hora') }
+  if (['virtual', 'certificacion_virtual', 'certificacion_presencial', 'virtual_participantes', 'presencial_participantes'].includes(ft) || isSaneamiento.value) steps.push('Empresa')
+  if ((ft === 'presencial' || ft === 'presencial_participantes') && !isSaneamiento.value) { steps.push('Ubicación'); steps.push('Fecha y hora') }
   if (ft === 'certificacion_presencial') { steps.push('Ubicación'); steps.push('Fecha y hora') }
   steps.push('Confirmar')
   return steps
@@ -2401,13 +2404,13 @@ const openServiceRequest = (svc) => {
   }
   showServicesModal.value = false
   formStep.value = 0
-  form.description = ''; form.people_count = 1; form.cycle = 1
+  form.description = ''; form.people_count = selectedService.value?.form_type === 'certificacion_presencial' ? 4 : 1; form.cycle = 1
   form.company_name = ''; form.company_nit = ''; form.company_address = ''
   form.company_phone = ''; form.company_owners = ''; form.company_locality = ''
   form.address = ''; form.reference_note = ''; form.lat = null; form.lng = null
   form.service_date = ''; form.service_time = '09:00'
-  // Si es capacitación → primero elegir subcategoría (tipo de establecimiento)
-  if (isCapacitacion.value) {
+  // Si es capacitación con subcategoría → primero elegir tipo de establecimiento
+  if (hasCycle.value) {
     showCertSubcatModal.value = true
     return
   }
@@ -2426,10 +2429,11 @@ const closeRequestModal = () => {
 }
 
 const validateStep = () => {
-  const s = currentStepName.value
-  if (s === 'Ubicación'   && !form.address.trim())  { showToast('Ingresa la dirección del servicio', 'error'); return false }
-  if (s === 'Fecha y hora' && !form.service_date)   { showToast('Selecciona la fecha del servicio', 'error'); return false }
-if (s === 'Descripción' && isCapacitacion.value) {
+  const s  = currentStepName.value
+  const ft = selectedService.value?.form_type ?? ''
+
+  // Paso Descripción — participantes obligatorios
+  if (s === 'Descripción' && isCapacitacion.value) {
     for (let i = 0; i < form.people_count; i++) {
       if (!form.people_names[i]?.trim()) {
         showToast(`Ingresa el nombre del participante ${i + 1}`, 'error'); return false
@@ -2439,6 +2443,27 @@ if (s === 'Descripción' && isCapacitacion.value) {
       }
     }
   }
+
+  // Paso Empresa — campos obligatorios
+  if (s === 'Empresa') {
+    if (!form.company_name?.trim())    { showToast('Ingresa el nombre de la empresa', 'error');    return false }
+    if (!form.company_address?.trim()) { showToast('Ingresa la dirección de la empresa', 'error'); return false }
+    if (!form.company_owners?.trim())  { showToast('Ingresa el propietario', 'error');             return false }
+    if (!form.company_nit?.trim())     { showToast('Ingresa el NIT o cédula', 'error');            return false }
+    if (!form.company_phone?.trim())   { showToast('Ingresa el celular', 'error');                 return false }
+    if (!form.company_locality?.trim()){ showToast('Ingresa la localidad', 'error');               return false }
+  }
+
+  // Paso Ubicación
+  if (s === 'Ubicación' && !form.address?.trim()) {
+    showToast('Ingresa la dirección del servicio', 'error'); return false
+  }
+
+  // Paso Fecha y hora
+  if (s === 'Fecha y hora' && !form.service_date) {
+    showToast('Selecciona la fecha del servicio', 'error'); return false
+  }
+
   return true
 }
 
@@ -2840,13 +2865,17 @@ const onAddressBlur = () => {
 const geocodeSearch = async (q) => {
   geocodeLoading.value = true
   try {
-    const { data } = await api.get(`/geocode?type=search&q=${encodeURIComponent(q)}&limit=6`)
-    const raw = Array.isArray(data) ? data.slice(0, 6) : []
-    geocodeResults.value = raw.map(r => {
-      const a         = r.address ?? {}
-      const main      = a.road || r.display_name.split(',')[0] || ''
-      const secondary = [a.suburb || a.neighbourhood, a.city || a.town || a.village].filter(Boolean).join(', ')
-      return { ...r, _main: main, _secondary: secondary, lng: parseFloat(r.lon ?? r.lng) }
+    const query = q.toLowerCase().includes('bogot') ? q : `${q}, Bogotá, Colombia`
+    const key   = import.meta.env.VITE_GOOGLE_MAPS_KEY
+    const res   = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${key}&language=es&region=co`)
+    const json  = await res.json()
+    const results = json.results ?? []
+    geocodeResults.value = results.slice(0, 6).map(r => {
+      const loc       = r.geometry.location
+      const main      = r.address_components?.find(c => c.types.includes('route'))?.long_name
+                     ?? r.formatted_address.split(',')[0]
+      const secondary = r.formatted_address
+      return { _main: main, _secondary: secondary, lat: loc.lat, lng: loc.lng, display_name: r.formatted_address }
     })
     showAddressSuggestions.value = geocodeResults.value.length > 0
   } catch { geocodeResults.value = []; showAddressSuggestions.value = false }
@@ -2855,86 +2884,74 @@ const geocodeSearch = async (q) => {
 
 const reverseGeocode = async (lat, lng) => {
   try {
-    const { data } = await api.get(`/geocode?type=reverse&lat=${lat}&lng=${lng}`)
-    if (data?.display_name) {
-      const a = data.address ?? {}
-      const parts = [
-        a.house_number ? `${a.road ?? ''} # ${a.house_number}` : (a.road ?? ''),
-        a.suburb || a.neighbourhood || '',
-        a.city || a.town || a.village || '',
-      ].filter(Boolean)
-      form.address = parts.length ? parts.join(', ') : data.display_name
-      addressSearch.value = form.address
+    const key  = import.meta.env.VITE_GOOGLE_MAPS_KEY
+    const res  = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${key}&language=es`)
+    const json = await res.json()
+    const r    = json.results?.[0]
+    if (r) {
+      form.address        = r.formatted_address
+      addressSearch.value = r.formatted_address
       if (bogotaCityId.value) form.city_id = bogotaCityId.value
     }
   } catch { /* ignore */ }
 }
 
 const selectGeoResult = (result) => {
-  const main      = result._main || result.display_name?.split(',')[0] || ''
-  const secondary = result._secondary || ''
-  form.address         = main + (secondary ? ', ' + secondary : '')
-  addressSearch.value  = form.address
-  form.lat = parseFloat(result.lat)
-  form.lng = result.lng ?? parseFloat(result.lon)
+  form.address         = result.display_name ?? result._main ?? ''
+  addressSearch.value  = result._main ?? form.address
+  form.lat             = parseFloat(result.lat)
+  form.lng             = parseFloat(result.lng ?? result.lon)
   geocodeResults.value       = []
   showAddressSuggestions.value = false
   if (bogotaCityId.value) form.city_id = bogotaCityId.value
   if (leafletMap && leafletMarker) {
-    leafletMarker.setLatLng([form.lat, form.lng])
-    leafletMap.setView([form.lat, form.lng], 16)
+    const pos = { lat: form.lat, lng: form.lng }
+    leafletMarker.setPosition(pos)
+    leafletMap.setCenter(pos)
+    leafletMap.setZoom(17)
   }
 }
 
 const initMap = async () => {
-  if (leafletMap) { try { leafletMap.invalidateSize() } catch { /* ignore */ } ; return }
   const el = document.getElementById('map-picker')
   if (!el) return
+  if (leafletMap) { window.google?.maps && leafletMap.setCenter({ lat: form.lat ?? 4.7109, lng: form.lng ?? -74.0721 }); return }
 
-  if (!document.getElementById('leaflet-css')) {
-    const link   = document.createElement('link')
-    link.id      = 'leaflet-css'
-    link.rel     = 'stylesheet'
-    link.href    = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-    document.head.appendChild(link)
-    await new Promise(r => { link.onload = r; setTimeout(r, 1000) })
+  const key = import.meta.env.VITE_GOOGLE_MAPS_KEY
+  if (!document.getElementById('google-maps-script')) {
+    await new Promise((resolve, reject) => {
+      const s    = document.createElement('script')
+      s.id       = 'google-maps-script'
+      s.src      = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&language=es`
+      s.onload   = resolve
+      s.onerror  = reject
+      document.head.appendChild(s)
+    })
   }
-
-  const L = (await import('leaflet')).default
-
-  delete L.Icon.Default.prototype._getIconUrl
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  })
 
   const lat0 = form.lat ?? 4.7109
   const lng0 = form.lng ?? -74.0721
 
-  leafletMap = L.map('map-picker').setView([lat0, lng0], 13)
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-  }).addTo(leafletMap)
-
-  leafletMarker = L.marker([lat0, lng0], { draggable: true }).addTo(leafletMap)
-
-  leafletMarker.on('dragend', async () => {
-    const { lat, lng } = leafletMarker.getLatLng()
-    form.lat = lat; form.lng = lng
-    await reverseGeocode(lat, lng)
+leafletMap = new window.google.maps.Map(el, {
+    center:             { lat: lat0, lng: lng0 },
+    zoom:               15,
+    mapTypeControl:     false,
+    streetViewControl:  false,
+    fullscreenControl:  false,
+    keyboardShortcuts:  false,
+    gestureHandling:    'greedy',
+    styles: [{ featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }],
   })
 
-  leafletMap.on('click', async (e) => {
-    const { lat, lng } = e.latlng
-    leafletMarker.setLatLng([lat, lng])
-    form.lat = lat; form.lng = lng
-    await reverseGeocode(lat, lng)
+  leafletMarker = new window.google.maps.Marker({
+    position:  { lat: lat0, lng: lng0 },
+    map:       leafletMap,
+    draggable: false,
   })
 }
 
 const destroyMap = () => {
-  if (leafletMap) { try { leafletMap.remove() } catch { /* ignore */ } ; leafletMap = null; leafletMarker = null }
+  leafletMap = null; leafletMarker = null
 }
 
 watch(currentStepName, async (name) => {

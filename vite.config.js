@@ -8,7 +8,7 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['images/logo-sin-letras.png'],
       manifest: {
         name: 'e-service',
         short_name: 'e-service',
@@ -18,7 +18,11 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [
-          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+          {
+            src: 'images/logo-sin-letras.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
         ],
       },
     }),
