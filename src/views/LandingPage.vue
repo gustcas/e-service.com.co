@@ -103,13 +103,15 @@
           </div>
 
           <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.1] mb-5">
-            Encuentra y contrata<br>
-            <span class="grad-text">servicios profesionales</span><br>
-            en segundos
+            Expertos en calidad<br>
+            <span class="grad-text">y seguridad</span><br>
+            para tu empresa
           </h1>
 
-          <p class="text-lg text-white/60 mb-8 max-w-lg leading-relaxed">
-            Conectamos clientes con los mejores profesionales. Plomería, electricidad, limpieza, tecnología y más — todo verificado y seguro.
+         <p class="text-lg text-white/60 mb-8 max-w-lg leading-relaxed">
+            Encuentra profesionales verificados que te ayudarán a capacitar a tu equipo, implementar buenas prácticas de
+            manipulación de alimentos, realizar fumigaciones y acceder a servicios especializados que fortalecen la
+            confianza de tus clientes y el crecimiento de tu negocio.
           </p>
 
           <div class="flex flex-wrap gap-3 mb-10">
