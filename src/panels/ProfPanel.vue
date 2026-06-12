@@ -1218,7 +1218,7 @@
             </div>
             <div>
               <label class="block text-[12px] font-bold text-slate-500 mb-1">Descripción</label>
-              <textarea v-model="svcForm.description" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none" placeholder="Describe lo que incluye tu servicio…" />
+              <textarea v-model="svcForm.description" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none" placeholder="" />
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
@@ -2120,7 +2120,14 @@ const getInitials = (name = '') =>
 const getMyLocation = () => {
   if (!navigator.geolocation) return
   navigator.geolocation.getCurrentPosition(
-    (pos) => { myLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude } },
+    (pos) => {
+      myLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+      if (mapInstance) {
+        mapInstance.setView([pos.coords.latitude, pos.coords.longitude], 13)
+        L.marker([pos.coords.latitude, pos.coords.longitude], { icon: createClientIcon() })
+          .addTo(mapInstance)
+      }
+    },
     () => { /* silencioso */ }
   )
 }
@@ -2144,12 +2151,20 @@ const initMap = async () => {
       cityCenter = { lat: city.lat || 4.7110, lng: city.lng || -74.0721 }
     }
   } catch { /* usar defecto */ }
-  mapInstance = L.map(mapRef.value, { zoomControl: false }).setView([cityCenter.lat, cityCenter.lng], 13)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution: '© CARTO', subdomains: 'abcd', maxZoom: 19
+  mapInstance = L.map(mapRef.value, {
+    zoomControl:       false,
+    preferCanvas:      true,
+    fadeAnimation:     false,
+    zoomAnimation:     false,
+    markerZoomAnimation: false,
+  }).setView([cityCenter.lat, cityCenter.lng], 13)
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom:     19,
+    keepBuffer:  1,
   }).addTo(mapInstance)
   L.control.zoom({ position: 'bottomright' }).addTo(mapInstance)
-  setTimeout(() => { if (mapInstance) mapInstance.invalidateSize() }, 300)
+  setTimeout(() => { if (mapInstance) mapInstance.invalidateSize() }, 100)
 }
 
 const drawRoute = async (from, to) => {
