@@ -225,7 +225,7 @@
           </div>
           <div>
             <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Descripción (opcional)</label>
-            <textarea v-model="catForm.description" rows="3" placeholder="Describe esta categoría..."
+            <textarea v-model="catForm.description" rows="3" placeholder=""
               class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition resize-none" />
           </div>
           
@@ -271,8 +271,10 @@
               class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition bg-white">
               <option value="presencial">Presencial</option>
               <option value="virtual">Virtual</option>
-              <option value="certificacion_virtual">Certificación Virtual</option>
-              <option value="certificacion_presencial">Certificación Presencial</option>
+              <option value="certificacion_virtual">Capacitación Virtual</option>
+                <option value="certificacion_presencial">Capacitación Presencial</option>
+                <option value="presencial_participantes">Presencial con participantes</option>
+                <option value="virtual_participantes">Virtual con participantes</option>
             </select>
           </div>
           <div>
