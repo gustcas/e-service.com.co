@@ -127,7 +127,7 @@
       <table class="w-full border-collapse text-[13px] min-w-[560px]">
         <thead>
           <tr>
-            <th v-for="h in ['Fecha','Admin','Acción','Entidad','Descripción']" :key="h"
+            <th v-for="h in ['ID Servicio','Fecha','Admin','Acción','Entidad','Descripción']" :key="h"
               class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wide border-b border-slate-100 bg-slate-50 text-left whitespace-nowrap first:pl-5">
               {{ h }}
             </th>
@@ -135,7 +135,13 @@
         </thead>
         <tbody>
           <tr v-for="log in logs" :key="log.id" class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
-            <td class="px-4 py-3 pl-5 whitespace-nowrap text-[11px] text-slate-400">{{ formatDate(log.created_at) }}</td>
+            <td class="px-4 py-3 pl-5 whitespace-nowrap">
+              <span v-if="log.entity_id" class="bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5 rounded">
+                #{{ String(log.entity_id).padStart(4,'0') }}
+              </span>
+              <span v-else class="text-slate-300 text-[11px]">—</span>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-[11px] text-slate-400">{{ formatDate(log.created_at) }}</td>
             <td class="px-4 py-3">
               <div class="flex items-center gap-2">
                 <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${log.admin_name}`"
