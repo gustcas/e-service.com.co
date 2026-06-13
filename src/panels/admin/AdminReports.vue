@@ -8,19 +8,12 @@
         <p class="text-sm text-slate-400 mt-0.5">Resumen ejecutivo · {{ today }}</p>
       </div>
       <div data-no-print class="flex gap-2">
-        <button @click="doPrint" :disabled="loading"
-          class="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-xl text-[13px] font-semibold text-slate-600 hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed">
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/>
-          </svg>
-          Imprimir
-        </button>
-        <button @click="doPrint" :disabled="loading"
-          class="flex items-center gap-2 px-4 py-2 bg-[#0d4f5c] text-white rounded-xl text-[13px] font-bold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed">
+        <button @click="downloadExcel" :disabled="loading"
+          class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[13px] font-bold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed">
           <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
           </svg>
-          Descargar PDF
+          Descargar Excel
         </button>
       </div>
     </div>
@@ -373,6 +366,37 @@ const doPrint = () => {
   window.addEventListener('afterprint', () => {
     try { document.body.removeChild(overlay) } catch { /* already removed */ }
   }, { once: true })
+}
+
+const downloadExcel = () => {
+  if (!report.value) return
+  const rows = []
+  // Por categoría
+  rows.push(['Categoría', 'Total', 'Completados', '% Completado'])
+  ;(report.value.by_category ?? []).forEach(c => {
+    rows.push([c.name, c.total, c.completed, c.total > 0 ? Math.round(c.completed / c.total * 100) + '%' : '0%'])
+  })
+  rows.push([])
+  // Top profesionales
+  rows.push(['Profesional', 'Trabajos completados', 'Ingresos'])
+  ;(report.value.top_professionals ?? []).forEach(p => {
+    rows.push([p.name, p.completed_jobs, p.total_earnings ?? ''])
+  })
+  rows.push([])
+  // Por mes
+  rows.push(['Mes', 'Total solicitudes', 'Completados'])
+  ;(report.value.by_month ?? []).forEach(m => {
+    rows.push([m.month ?? m.label, m.total, m.completed])
+  })
+
+  const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `reporte_${new Date().toISOString().slice(0,10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 onMounted(fetchReport)

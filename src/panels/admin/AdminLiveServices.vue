@@ -165,7 +165,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="req in filteredRequests" :key="req.id" class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
+              <tr v-for="req in livePagedItems" :key="req.id" class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
                 <td class="px-4 py-3 pl-5 whitespace-nowrap">
                   <span class="text-[12px] font-bold text-[#0d4f5c]">#{{ String(req.id).padStart(4,'0') }}</span>
                 </td>
@@ -218,6 +218,13 @@
               </tr>
             </tbody>
           </table>
+          <div v-if="liveTotalPages > 1" class="flex items-center justify-center gap-3 px-5 py-3 border-t border-slate-100">
+              <button :disabled="livePage <= 1" @click="livePage--"
+                class="px-3 py-1.5 bg-slate-100 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-200 transition disabled:opacity-40">← Anterior</button>
+              <span class="text-[12px] text-slate-500 font-semibold">{{ livePage }} / {{ liveTotalPages }}</span>
+              <button :disabled="livePage >= liveTotalPages" @click="livePage++"
+                class="px-3 py-1.5 bg-slate-100 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-200 transition disabled:opacity-40">Siguiente →</button>
+            </div>
         </div>
       </div>
     </div>
@@ -386,7 +393,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="chat in filteredChats" :key="chat.request_id" class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
+              <tr v-for="chat in chatPagedItems" :key="chat.request_id" class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
                 <td class="px-4 py-3 pl-5">
                   <span class="text-[12px] font-bold text-[#0d4f5c]">#{{ String(chat.request_id).padStart(4,'0') }}</span>
                 </td>
@@ -422,6 +429,13 @@
               </tr>
             </tbody>
           </table>
+          <div v-if="chatTotalPages > 1" class="flex items-center justify-center gap-3 px-5 py-3 border-t border-slate-100">
+              <button :disabled="chatPage <= 1" @click="chatPage--"
+                class="px-3 py-1.5 bg-slate-100 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-200 transition disabled:opacity-40">← Anterior</button>
+              <span class="text-[12px] text-slate-500 font-semibold">{{ chatPage }} / {{ chatTotalPages }}</span>
+              <button :disabled="chatPage >= chatTotalPages" @click="chatPage++"
+                class="px-3 py-1.5 bg-slate-100 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-200 transition disabled:opacity-40">Siguiente →</button>
+            </div>
         </div>
       </div>
     </div>
@@ -519,6 +533,7 @@
                   <p class="text-[11px] font-black text-blue-600 uppercase tracking-wide pb-1.5 border-b border-slate-100">👤 Cliente</p>
                   <div class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Nombre</span><strong class="text-[#0f172a] text-right">{{ detailModal.req.client_name }}</strong></div>
                   <div class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Email</span><strong class="text-[#0f172a] text-right">{{ detailModal.req.client_email }}</strong></div>
+                 <div v-if="detailModal.req.client_phone" class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Celular</span><strong class="text-[#0f172a]">{{ detailModal.req.client_phone }}</strong></div>
                   <div class="flex justify-between items-center text-[12px]">
                     <span class="text-slate-500">Estado conexión</span>
                     <span :class="['text-[11px] font-bold px-2 py-0.5 rounded-lg', detailModal.req.client_online ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500']">
@@ -553,9 +568,16 @@
                   <div class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Presupuesto</span><strong class="text-[#0f172a]">${{ Number(detailModal.req.budget||0).toLocaleString('es-CO') }}</strong></div>
                   <div v-if="detailModal.req.description" class="flex justify-between items-start gap-4 text-[12px]"><span class="text-slate-500 flex-shrink-0">Descripción</span><strong class="text-[#0f172a] text-right">{{ detailModal.req.description }}</strong></div>
                   <div v-if="detailModal.req.address" class="flex justify-between items-start gap-4 text-[12px]"><span class="text-slate-500 flex-shrink-0">Dirección</span><strong class="text-[#0f172a] text-right">{{ detailModal.req.address }}</strong></div>
-                  <div v-if="detailModal.req.service_date" class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Fecha</span><strong class="text-[#0f172a]">{{ detailModal.req.service_date }}</strong></div>
+                  <div v-if="detailModal.req.service_date" class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Fecha de servicio</span><strong class="text-[#0f172a]">{{ detailModal.req.service_date }}</strong></div>
                   <div v-if="detailModal.req.service_time" class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Hora</span><strong class="text-[#0f172a]">{{ detailModal.req.service_time }}</strong></div>
                   <div v-if="detailModal.req.people_count" class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Personas</span><strong class="text-[#0f172a]">{{ detailModal.req.people_count }}</strong></div>
+                  <div v-if="detailModal.req.people_names?.length" class="space-y-1 pt-1">
+                    <p class="text-[11px] font-black text-slate-400 uppercase tracking-wide">Participantes</p>
+                    <div v-for="(name, i) in detailModal.req.people_names" :key="i" class="flex justify-between items-center text-[12px] bg-slate-50 rounded-lg px-2 py-1">
+                      <span class="text-slate-600">{{ name }}</span>
+                      <span class="text-slate-400 font-mono text-[11px]">{{ detailModal.req.people_identifications?.[i] ?? '' }}</span>
+                    </div>
+                  </div>
                   <div class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Creado</span><strong class="text-[#0f172a]">{{ detailModal.req.created_at }}</strong></div>
                   <div class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Actualizado</span><strong class="text-[#0f172a]">{{ detailModal.req.updated_at }}</strong></div>
                   <div class="flex justify-between items-center text-[12px]"><span class="text-slate-500">Tiempo</span><strong class="text-[#0f172a]">{{ detailModal.req.elapsed }}</strong></div>
@@ -599,8 +621,8 @@
                   <div v-if="detailModal.loadingEvidences" class="text-[13px] text-slate-400 py-2">Cargando evidencias…</div>
                   <div v-else-if="!detailModal.evidences.length" class="text-[13px] text-slate-400 py-2">Sin evidencias registradas.</div>
                   <div v-else class="grid grid-cols-3 gap-2.5 pt-1">
-                    <a v-for="(ev, i) in detailModal.evidences" :key="i" :href="ev.url" target="_blank"
-                      class="flex flex-col items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50 hover:border-blue-400 hover:shadow-sm transition no-underline">
+                    <div v-for="(ev, i) in detailModal.evidences" :key="i" @click="downloadEvidence(ev)"
+                      class="flex flex-col items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50 hover:border-blue-400 hover:shadow-sm transition cursor-pointer">
                       <img v-if="ev.is_image" :src="ev.url" :alt="ev.file_name" class="w-full h-20 object-cover" />
                       <div v-else class="flex flex-col items-center gap-1 p-3 text-slate-400">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="26" height="26">
@@ -609,7 +631,7 @@
                         <span class="text-[10px] text-center break-all text-slate-500">{{ ev.file_name }}</span>
                       </div>
                       <p v-if="ev.description" class="text-[10px] text-slate-400 px-1.5 pb-1 text-center truncate w-full">{{ ev.description }}</p>
-                    </a>
+                    </div>
                   </div>
                   </div>
                 <!-- Documentación del servicio -->
@@ -825,7 +847,20 @@ const tabBadge = (key) => {
   if (key === 'users')     return ((summary.value.clients_online || 0) + (summary.value.professionals_online || 0)) || null
   return null
 }
+const LIVE_PAGE = 15
+const livePage  = ref(1)
+const livePagedItems = computed(() => {
+  const start = (livePage.value - 1) * LIVE_PAGE
+  return filteredRequests.value.slice(start, start + LIVE_PAGE)
+})
+const liveTotalPages = computed(() => Math.max(1, Math.ceil(filteredRequests.value.length / LIVE_PAGE)))
 
+const chatPage  = ref(1)
+const chatPagedItems = computed(() => {
+  const start = (chatPage.value - 1) * LIVE_PAGE
+  return filteredChats.value.slice(start, start + LIVE_PAGE)
+})
+const chatTotalPages = computed(() => Math.max(1, Math.ceil(filteredChats.value.length / LIVE_PAGE)))
 const kpiIconBg = (color) => ({
   blue:   'bg-blue-50',
   green:  'bg-emerald-50',
@@ -1013,32 +1048,42 @@ const openDetail = async (req) => {
 }
 
 const downloadAdminDoc = async (req, type) => {
-  const docType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  let endpoint = ''
+let endpoint = ''
   let filename  = ''
 
   if (type === 'plan') {
     endpoint = `/admin/requests/${req.id}/certification-document/plan`
-    filename  = `Plan_Capacitacion_${req.id}.docx`
+    filename  = `Plan_Capacitacion_${req.id}.pdf`
   } else if (type === 'eval') {
     endpoint = `/admin/requests/${req.id}/certification-document/eval`
-    filename  = `Evaluacion_${req.id}.docx`
+    filename  = `Evaluacion_${req.id}.pdf`
   } else if (type === 'video') {
     endpoint = `/admin/requests/${req.id}/certification-document/video`
-    filename  = `Video_${req.id}.docx`
+    filename  = `Video_${req.id}.pdf`
   } else if (type === 'saneamiento') {
     endpoint = `/admin/requests/${req.id}/saneamiento-document-admin`
-    filename  = `PlanSaneamiento_${req.id}.docx`
+    filename  = `PlanSaneamiento_${req.id}.pdf`
   }
 
   try {
     const res = await api.get(endpoint, { responseType: 'blob' })
-    const url = URL.createObjectURL(new Blob([res.data], { type: docType }))
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
     const a   = document.createElement('a'); a.href = url
     a.download = filename; a.click(); URL.revokeObjectURL(url)
   } catch {
     // documento no disponible
   }
+}
+
+const downloadEvidence = (ev) => {
+  const a = document.createElement('a')
+  a.href = ev.url
+  a.setAttribute('target', '_blank')
+  a.setAttribute('rel', 'noopener noreferrer')
+  a.setAttribute('download', '')
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => document.body.removeChild(a), 100)
 }
 
 const adminDocList = (req) => {

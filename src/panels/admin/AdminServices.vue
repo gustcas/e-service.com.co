@@ -86,7 +86,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-50">
-            <tr v-for="s in filteredAdminServices" :key="s.id" class="hover:bg-slate-50 transition">
+            <tr v-for="s in svsPagedItems" :key="s.id" class="hover:bg-slate-50 transition">
               <td class="px-6 py-4">
                 <p class="font-semibold text-[#0f172a] text-[13px]">{{ s.name }}</p>
                 <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{{ s.description }}</p>
@@ -114,6 +114,13 @@
             </tr>
           </tbody>
         </table>
+        <div v-if="svsTotalPages > 1" class="flex items-center justify-center gap-3 px-5 py-3 border-t border-slate-100">
+              <button :disabled="svsPage <= 1" @click="svsPage--"
+                class="px-3 py-1.5 bg-slate-100 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-200 transition disabled:opacity-40">← Anterior</button>
+              <span class="text-[12px] text-slate-500 font-semibold">{{ svsPage }} / {{ svsTotalPages }}</span>
+              <button :disabled="svsPage >= svsTotalPages" @click="svsPage++"
+                class="px-3 py-1.5 bg-slate-100 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-200 transition disabled:opacity-40">Siguiente →</button>
+            </div>
         </div>
       </template>
     </div>
@@ -249,7 +256,14 @@ const svsMobilePagedItems = computed(() => {
 })
 const svsMobileTotalPages = computed(() => Math.ceil(filteredAdminServices.value.length / SVC_MOBILE_PG))
 watch([svcSearch, svcCatFilter], () => { svsMobilePage.value = 1 })
-
+const SVC_PAGE = 15
+const svsPage  = ref(1)
+const svsPagedItems  = computed(() => {
+  const start = (svsPage.value - 1) * SVC_PAGE
+  return filteredAdminServices.value.slice(start, start + SVC_PAGE)
+})
+const svsTotalPages = computed(() => Math.max(1, Math.ceil(filteredAdminServices.value.length / SVC_PAGE)))
+watch([svcSearch, svcCatFilter], () => { svsPage.value = 1 })
 const openSvcModal = (svc) => {
   editingSvc.value    = svc
   svcForm.name        = svc?.name        ?? ''

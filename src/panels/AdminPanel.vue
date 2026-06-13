@@ -2,8 +2,8 @@
   <div class="flex h-full overflow-hidden">
 
     <!-- Sidebar (dark teal) — hidden on mobile -->
-    <div class="hidden md:flex-shrink-0 md:block md:w-56 h-full" style="background:#0d4f5c">
-      <AppSidebar :items="navItems" :activePage="page" :dark="true" @navigate="page = $event" @logout="authStore.logout()" />
+    <div class="hidden md:flex-shrink-0 md:block md:w-56 h-full" :style="{ background: permissionsLoaded ? '#0d4f5c' : '#0f172a' }">
+      <AppSidebar v-if="permissionsLoaded" :items="navItems" :activePage="page" :dark="true" @navigate="page = $event" @logout="authStore.logout()" />
     </div>
 
     <!-- Mobile sidebar drawer -->
@@ -332,6 +332,7 @@ const authStore  = useAuthStore()
 const themeStore = useThemeStore()
 const isDark     = computed(() => themeStore.isDark)
 const adminName = computed(() => authStore.user?.name ?? 'Administrador')
+const permissionsLoaded = ref(false)
 
 // ─── Toast (composable compartido con los sub-componentes) ────────────────────
 const { toasts, showToast, removeToast } = useAdminToast()
@@ -354,7 +355,26 @@ const SVG = {
   supp:  `<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>`,
 }
 
-const navItems = [
+// Mapa módulo → nombres de página que incluye
+const modulePageMap = {
+  dashboard:    ['Panel de administración'],
+  users:        ['Usuarios'],
+  categories:   ['Categorías', 'Cuentas'],
+  payments:     ['Pagos'],
+  live_services:['Servicios en Vivo'],
+  auditory:     ['Auditoría', 'Administradores'],
+  reports:      ['Reportes'],
+  settings:     ['Configuración', 'Soporte'],
+}
+
+const hasPermission = (pageName) => {
+  if (!isSubAdmin.value) return true // super admin ve todo
+  return Object.entries(modulePageMap).some(([mod, pages]) =>
+    pages.includes(pageName) && userPermissions.value.includes(mod)
+  )
+}
+
+const allNavItems = [
   { name:'Panel de administración', label:'Panel admin',  iconSvg: SVG.home  },
   { divider: true },
   { name:'Usuarios',      label:'Usuarios',   iconSvg: SVG.users },
@@ -371,8 +391,21 @@ const navItems = [
   { name:'Soporte',       label:'Soporte',  iconSvg: SVG.supp  },
 ]
 
+const navItems = computed(() => {
+  const filtered = allNavItems.filter(item => item.divider || hasPermission(item.name))
+  // Quitar dividers consecutivos o al inicio/final
+  return filtered.filter((item, i, arr) => {
+    if (!item.divider) return true
+    const prev = arr[i - 1]
+    const next = arr[i + 1]
+    return next && !next.divider && prev && !prev.divider
+  })
+})
+
 // ─── Dashboard real API ───────────────────────────────────────────────────────
 const dashLoading = ref(false)
+const isSubAdmin    = ref(false)
+const userPermissions = ref([])
 const usersByDayData  = ref([])
 const incomeByDayData = ref([])
 const dashRaw = ref({
@@ -399,7 +432,14 @@ const fetchDashStats = async () => {
 
     // Stats
     if (statsRes.status === 'fulfilled') {
-      const s = statsRes.value.data.stats ?? statsRes.value.data
+      const resp = statsRes.value.data
+      isSubAdmin.value      = resp.is_sub_admin ?? false
+      const perms           = resp.permissions ?? {}
+      userPermissions.value = Object.keys(perms).filter(k => 
+        perms[k]?.enabled === true || perms[k]?.read === true
+      )
+      permissionsLoaded.value = true
+      const s = resp.stats ?? resp
       const n = (...keys) => { for (const k of keys) if (s[k] != null) return Number(s[k]); return 0 }
       Object.assign(dashRaw.value, {
         totalUsers:           n('totalUsers',           'total_users',           'users'),
@@ -566,7 +606,14 @@ watch(page, (p) => { if (p === 'Panel de administración') fetchDashStats() })
 // Categories CRUD → movido a AdminCategories.vue
 // Sub-admins CRUD → movido a AdminSubAdmins.vue
 // Services CRUD   → movido a AdminServices.vue
-
+watch([page, permissionsLoaded], () => {
+  if (!permissionsLoaded.value) return
+  if (!isSubAdmin.value) return
+  if (!hasPermission(page.value)) {
+    const first = navItems.value.find(i => !i.divider)
+    if (first) page.value = first.name
+  }
+})
 onMounted(() => {
   fetchDashStats()
   // Usuarios   → AdminUsers.vue

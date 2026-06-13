@@ -295,6 +295,10 @@
                   class="w-full bg-[#2563ff] hover:bg-blue-700 text-white font-bold text-[13px] py-2.5 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60">
                   {{ generating === req.id ? 'Generando...' : '🔐 Generar código de aprobación' }}
                 </button>
+                <button @click="openEvidences(req)"
+                  class="w-full border border-slate-200 bg-white hover:bg-slate-50 text-[12px] font-semibold text-slate-600 py-2 rounded-xl transition">
+                  🖼️ Ver evidencias
+                </button>
               </template>
 
               <!-- === COMPLETADA === -->
@@ -370,8 +374,7 @@
                   <button v-if="req.status === 'payment_pending'" @click="retryPayment(req)" class="flex-1 text-[12px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 px-3 py-2 rounded-xl transition whitespace-nowrap text-center">💳 Pagar</button>
                   <button v-if="ACTIVE_SET.includes(req.status)" @click="req.completion_code ? Object.assign(codeModal, {open:true,req}) : generateCode(req)" :disabled="generating === req.id" class="text-[11px] font-bold text-blue-600 border border-blue-200 px-2.5 py-1.5 rounded-xl hover:bg-blue-50 transition whitespace-nowrap disabled:opacity-60">🔐 Código</button>
                   <button v-if="(ACTIVE_SET.includes(req.status) || req.status === 'completed') && req.pro" @click="openChatWithPro(req)" class="text-[11px] font-bold text-emerald-600 border border-emerald-200 px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 transition whitespace-nowrap">💬 Chat</button>
-                  <button v-if="req.status === 'completed'" @click="openEvidences(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 transition whitespace-nowrap">🖼️ Ver</button>
-                  <button v-if="req.status === 'completed' && !req._rated" @click="openRatingModal(req)" class="text-[11px] font-bold text-amber-600 border border-amber-200 px-2.5 py-1.5 rounded-xl hover:bg-amber-50 transition whitespace-nowrap">⭐ Calificar</button>
+<button v-if="ACTIVE_SET.includes(req.status) || req.status === 'completed'" @click="openEvidences(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 transition whitespace-nowrap">🖼️ Ver</button>                  <button v-if="req.status === 'completed' && !req._rated" @click="openRatingModal(req)" class="text-[11px] font-bold text-amber-600 border border-amber-200 px-2.5 py-1.5 rounded-xl hover:bg-amber-50 transition whitespace-nowrap">⭐ Calificar</button>
                 </div>
               </div>
             </div>
@@ -403,8 +406,7 @@
                         <button v-if="req.status === 'payment_pending'" @click="retryPayment(req)" class="text-[11px] font-bold text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition whitespace-nowrap">💳 Pagar</button>
                         <button v-if="ACTIVE_SET.includes(req.status)" @click="req.completion_code ? Object.assign(codeModal, {open:true,req}) : generateCode(req)" :disabled="generating === req.id" class="text-[11px] font-bold text-blue-600 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition whitespace-nowrap disabled:opacity-60">🔐 Código</button>
                         <button v-if="(ACTIVE_SET.includes(req.status) || req.status === 'completed') && req.pro" @click="openChatWithPro(req)" class="text-[11px] font-bold text-emerald-600 border border-emerald-200 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition whitespace-nowrap">💬 Chat</button>
-                        <button v-if="req.status === 'completed'" @click="openEvidences(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">🖼️ Ver</button>
-                        <template v-if="req.status === 'completed' && isCapacitacionReq(req)">
+<button v-if="ACTIVE_SET.includes(req.status) || req.status === 'completed'" @click="openEvidences(req)" class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">🖼️ Ver</button>                        <template v-if="req.status === 'completed' && isCapacitacionReq(req)">
                           <button v-if="actaAvailable(req)" @click="downloadActa(req)"
                             class="text-[11px] font-bold text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 transition whitespace-nowrap">
                             📄 Descargar documentos
@@ -1539,7 +1541,7 @@
               <p class="text-[13px]">El profesional no ha subido evidencias aún.</p>
             </div>
             <div v-else class="grid grid-cols-2 gap-4">
-              <a v-for="ev in evidenceModal.items" :key="ev.id" :href="ev.file_url" target="_blank"
+              <div v-for="ev in evidenceModal.items" :key="ev.id" @click="downloadEvidence(ev)" style="cursor:pointer"
                 class="block bg-slate-50 border border-slate-200 rounded-xl overflow-hidden hover:border-blue-300 transition cursor-pointer">
                 <div class="h-28 flex items-center justify-center bg-slate-100">
                   <img v-if="ev.file_type === 'image'" :src="ev.file_url" class="w-full h-full object-cover" :alt="ev.note" />
@@ -1549,7 +1551,7 @@
                   <p class="text-[12px] font-semibold text-[#0f172a] truncate">{{ ev.note || ev.file_type?.toUpperCase() }}</p>
                   <p class="text-[10px] text-slate-400 mt-0.5">{{ ev.created_at }}</p>
                 </div>
-              </a>
+              </div>
             </div>
           </div>
         </div>
@@ -1901,10 +1903,21 @@ const downloadActa = async (req) => {
 const downloadSaneamiento = async (req) => {
   try {
     const res = await api.get(`/client/requests/${req.id}/saneamiento-document`, { responseType: 'blob' })
-    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }))
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
     const a   = document.createElement('a'); a.href = url
-    a.download = `PlanSaneamiento_${req.num}.docx`; a.click(); URL.revokeObjectURL(url)
+    a.download = `PlanSaneamiento_${req.num}.pdf`; a.click(); URL.revokeObjectURL(url)
   } catch { showToast('No se pudo descargar el documento', 'error') }
+}
+
+const downloadEvidence = (ev) => {
+  const a = document.createElement('a')
+  a.href = ev.file_url
+  a.setAttribute('target', '_blank')
+  a.setAttribute('rel', 'noopener noreferrer')
+  a.setAttribute('download', '')
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => document.body.removeChild(a), 100)
 }
 
 const actaAvailable = (req) => {

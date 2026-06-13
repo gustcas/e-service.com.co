@@ -143,13 +143,13 @@
           <table class="w-full text-sm min-w-[740px]">
             <thead class="bg-slate-50">
               <tr>
-                <th v-for="h in ['SR#','Servicio','Profesional','Monto bruto','Estado','Última actualización','Acción']" :key="h"
+                <th v-for="h in ['ID Servicio','SR#','Servicio','Profesional','Monto bruto','Estado','Última actualización','Acción']" :key="h"
                   class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
               <tr v-for="sr in pending.data" :key="sr.id" class="hover:bg-slate-50 transition">
-                <td class="px-5 py-3 font-mono text-[12px] text-slate-600">{{ sr.id }}</td>
+                <td class="px-5 py-3"><span class="bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5 rounded">#{{ String(sr.id).padStart(4,'0') }}</span></td><td class="px-5 py-3 font-mono text-[12px] text-slate-600">{{ sr.id }}</td>
                 <td class="px-5 py-3 text-[13px] text-[#0f172a]">{{ sr.service_name }}</td>
                 <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ sr.professional_name }}</td>
                 <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ sr.budget_formatted }}</td>
@@ -245,13 +245,14 @@
           <table class="w-full text-sm min-w-[700px]">
             <thead class="bg-slate-50">
               <tr>
-                <th v-for="h in ['#','Referencia','Cliente','Servicio','Monto','Estado','Fecha']" :key="h"
+                <th v-for="h in ['#','ID Servicio','Referencia','Cliente','Servicio','Monto','Estado','Fecha']" :key="h"
                   class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
               <tr v-for="p in payments.data" :key="p.id" class="hover:bg-slate-50 transition">
                 <td class="px-5 py-3 font-mono text-[12px] text-slate-500">{{ p.id }}</td>
+         <td class="px-5 py-3"><span class="bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5 rounded">#{{ String(p.service_request_id ?? p.id).padStart(4,'0') }}</span></td>
                 <td class="px-5 py-3 font-mono text-[11px] text-slate-500">{{ p.reference }}</td>
                 <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.client_name }}</td>
                 <td class="px-5 py-3 text-[13px] text-slate-600">
@@ -264,7 +265,7 @@
                     {{ statusLabel(p.status) }}
                   </span>
                 </td>
-                <td class="px-5 py-3 text-[12px] text-slate-400">{{ fmtDateTime(p.paid_at ?? p.created_at) }}</td>
+                <td class="px-5 py-3 text-[12px] text-slate-400">{{ p.paid_at ? fmtDateTime(p.paid_at) : p.created_at ? fmtDateTime(p.created_at) : '—' }}</td>
               </tr>
             </tbody>
           </table>
@@ -334,13 +335,14 @@
           <table class="w-full text-sm min-w-[780px]">
             <thead class="bg-slate-50">
               <tr>
-                <th v-for="h in ['#','Profesional','Monto','Método','Estado Wompi','Estado','Origen','Fecha']" :key="h"
+                <th v-for="h in ['#','ID Servicio','Profesional','Monto','Método','Estado Wompi','Estado','Origen','Fecha']" :key="h"
                   class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
               <tr v-for="p in payouts.data" :key="p.id" class="hover:bg-slate-50 transition">
                 <td class="px-5 py-3 font-mono text-[12px] text-slate-500">{{ p.id }}</td>
+         <td class="px-5 py-3"><span class="bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5 rounded">#{{ String(p.service_request_id ?? p.id).padStart(4,'0') }}</span></td>
                 <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.professional_name }}</td>
                 <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.amount_formatted }}</td>
                 <td class="px-5 py-3 text-[12px] text-slate-500">{{ methodLabel(p.payment_method) }}</td>
@@ -397,8 +399,8 @@ const payouts  = ref({ data: [], last_page: 1, current_page: 1 })
 const pending  = ref({ data: [], last_page: 1, current_page: 1 })
 
 const tabs = [
-  { id: 'pending',  icon: '🔔', label: 'Pendientes de dispersar' },
   { id: 'payments', icon: '💳', label: 'Cobros al cliente' },
+  { id: 'pending',  icon: '🔔', label: 'Pendientes de dispersar' },
   { id: 'payouts',  icon: '🏦', label: 'Dispersiones' },
 ]
 
@@ -406,7 +408,10 @@ const fmtNum = (v) => new Intl.NumberFormat('es-CO').format(v ?? 0)
 
 const fmtDateTime = (d) => {
   if (!d) return '—'
-  return new Date(d).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  if (typeof d === 'string' && /^\d{2}\/\d{2}\/\d{4}/.test(d)) return d
+  const date = new Date(d)
+  if (isNaN(date.getTime())) return '—'
+  return date.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 const statusLabel = (s) => ({ approved: 'Aprobado', pending: 'Pendiente', failed: 'Fallido', processing: 'En proceso' }[s] ?? s)

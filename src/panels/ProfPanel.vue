@@ -343,7 +343,7 @@
                     </div>
                     <span class="job-svc">{{ job.service_name }}</span>
                   </div>
-                  <div class="job-budget">${{ Number(job.budget).toLocaleString('es-CO') }}</div>
+                  <div class="job-budget">${{ Number(job.net_amount ?? job.budget).toLocaleString('es-CO') }}</div>
                   <p class="job-desc">{{ job.description }}</p>
                   <div class="job-chips">
                     <span class="chip">📅 {{ job.service_date }} {{ job.service_time }}</span>
@@ -368,6 +368,8 @@
               </div>
               <div class="card-actions">
                 <button v-if="job.status === 'accepted'" class="btn-evidence-job" @click.stop="openJobEvidence(job)">📷 Evidencias</button>
+                <button v-if="job.status === 'accepted' && job.form_type === 'certificacion_presencial'"
+                  class="btn-evidence-job" @click.stop="downloadJobDocs(job)">📄 Documentos</button>
                 <button v-if="job.status === 'accepted'" class="btn-complete-job" @click.stop="openJobCode(job)">✓ Completar</button>
                 <button v-if="job.status === 'completed'" class="btn-view-ev-job" @click.stop="openJobEvidence(job)">🖼️ Ver evidencias</button>
                 <button v-if="job.status === 'completed' && !job._rated" class="btn-rate-client-job" @click.stop="openJobRating(job)">⭐ Calificar cliente</button>
@@ -401,7 +403,7 @@
                 </div>
                 <div class="lr-date"><span>{{ job.service_date }}</span><span class="lr-time">{{ job.service_time }}</span></div>
                 <span class="lr-addr hide-sm">{{ job.address || '💻 Virtual' }}</span>
-                <span class="lr-budget">${{ Number(job.budget).toLocaleString('es-CO') }}</span>
+                <span class="lr-budget">${{ Number(job.net_amount ?? job.budget).toLocaleString('es-CO') }}</span>
                 <div class="lr-client hide-sm">
                   <div class="trabajos-client-avatar sm">{{ getInitials(job.client_name) }}</div>
                   <span class="lr-client-name">{{ job.client_name }}</span>
@@ -419,6 +421,8 @@
                       <span v-if="unreadChats[job.id]" class="chat-unread-badge">{{ unreadChats[job.id] }}</span>
                     </button>
                     <button v-if="job.status === 'accepted'" class="btn-evidence-job" @click.stop="openJobEvidence(job)">📷 Evidencias</button>
+                    <button v-if="job.status === 'accepted' && job.form_type === 'certificacion_presencial'"
+                      class="btn-evidence-job" @click.stop="downloadJobDocs(job)">📄 Documentos</button>
                     <button v-if="job.status === 'accepted'" class="btn-complete-job" @click.stop="openJobCode(job)">✓ Completar</button>
                     <button v-if="job.status === 'completed'" class="btn-view-ev-job" @click.stop="openJobEvidence(job)">🖼️ Ver evidencias</button>
                     <button v-if="job.status === 'completed' && !job._rated" class="btn-rate-client-job" @click.stop="openJobRating(job)">⭐ Calificar cliente</button>
@@ -1297,11 +1301,11 @@
               <button v-if="selectedJobForEvid?.status === 'accepted'"
                 @click="deleteEvidence(ev)"
                 style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:#ef4444;color:white;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:10;line-height:1">×</button>
-              <a :href="ev.file_url" target="_blank">
+              <div @click="downloadEvidence(ev)" style="cursor:pointer">
                 <img v-if="ev.file_type === 'image'" :src="ev.file_url" class="ev-preview"
-                  style="cursor:pointer" @error="e => e.target.style.display='none'" />
+                  @error="e => e.target.style.display='none'" />
                 <div v-else class="ev-file-icon">{{ ev.file_type === 'video' ? '🎥' : '📄' }}</div>
-              </a>
+              </div>
               <p class="ev-note">{{ ev.note || 'Sin nota' }}</p>
               <span class="ev-date">{{ ev.created_at }}</span>
             </div>
@@ -2335,6 +2339,35 @@ const openJobEvidence = async (job) => {
     const res = await api.get(`/professional/requests/${job.id}/evidences`)
     jobEvidences.value = res.data
   } catch { showToast('Error al cargar evidencias', 'error') }
+}
+
+const downloadJobDocs = async (job) => {
+  try {
+    const downloads = [
+      { endpoint: 'plan',       name: `Plan_Capacitacion_${String(job.id).padStart(4,'0')}.pdf` },
+      { endpoint: 'eval-blank', name: `Evaluacion_${String(job.id).padStart(4,'0')}.pdf` },
+    ]
+    for (const doc of downloads) {
+      try {
+        const res = await api.get(`/professional/requests/${job.id}/certification-document/${doc.endpoint}`, { responseType: 'blob' })
+        const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+        const a   = document.createElement('a'); a.href = url
+        a.download = doc.name; a.click(); URL.revokeObjectURL(url)
+        await new Promise(r => setTimeout(r, 500))
+      } catch { /* continuar si un archivo no existe */ }
+    }
+  } catch { showToast('Error al descargar documentos', 'error') }
+}
+
+const downloadEvidence = (ev) => {
+  const a = document.createElement('a')
+  a.href = ev.file_url
+  a.setAttribute('target', '_blank')
+  a.setAttribute('rel', 'noopener noreferrer')
+  a.setAttribute('download', '')
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => document.body.removeChild(a), 100)
 }
 
 const openJobCode = (job) => {
