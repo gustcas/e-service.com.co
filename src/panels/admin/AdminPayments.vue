@@ -143,7 +143,7 @@
           <table class="w-full text-sm min-w-[740px]">
             <thead class="bg-slate-50">
               <tr>
-                <th v-for="h in ['ID Servicio','SR#','Servicio','Profesional','Monto bruto','Estado','Última actualización','Acción']" :key="h"
+                <th v-for="h in ['ID Servicio','SR#','Servicio','Profesional','Monto bruto','Neto profesional','ASECALIDAD','IMAVICX','Estado','Última actualización','Acción']" :key="h"
                   class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
               </tr>
             </thead>
@@ -153,6 +153,9 @@
                 <td class="px-5 py-3 text-[13px] text-[#0f172a]">{{ sr.service_name }}</td>
                 <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ sr.professional_name }}</td>
                 <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ sr.budget_formatted }}</td>
+         <td class="px-5 py-3 font-bold text-[13px] text-emerald-600">{{ sr.net_amount_formatted ?? '—' }}</td>
+         <td class="px-5 py-3 font-bold text-[13px] text-purple-600">{{ sr.asecalidad_amount_formatted ?? '—' }}</td>
+                <td class="px-5 py-3 font-bold text-[13px] text-blue-600">{{ sr.imavicx_amount_formatted ?? '—' }}</td>
                 <td class="px-5 py-3">
                   <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full',
                     sr.payout_status === 'payout_failed' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700']">
@@ -335,15 +338,27 @@
           <table class="w-full text-sm min-w-[780px]">
             <thead class="bg-slate-50">
               <tr>
-                <th v-for="h in ['#','ID Servicio','Profesional','Monto','Método','Estado Wompi','Estado','Origen','Fecha']" :key="h"
+                <th v-for="h in ['#','ID Servicio','Destinatario','Profesional','Monto','Método','Estado Wompi','Estado','Origen','Fecha']" :key="h"
                   class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
               <tr v-for="p in payouts.data" :key="p.id" class="hover:bg-slate-50 transition">
                 <td class="px-5 py-3 font-mono text-[12px] text-slate-500">{{ p.id }}</td>
-         <td class="px-5 py-3"><span class="bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5 rounded">#{{ String(p.service_request_id ?? p.id).padStart(4,'0') }}</span></td>
-                <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.professional_name }}</td>
+                 <td class="px-5 py-3"><span
+                      class="bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5 rounded">#{{
+                        String(p.service_request_id ?? p.id).padStart(4,'0') }}</span></td>
+                  <td class="px-5 py-3">
+                    <span :class="['text-[10px] font-bold px-2 py-0.5 rounded-full',
+                      p.entity_type === 'asecalidad' ? 'bg-purple-100 text-purple-700' :
+                        p.entity_type === 'imavicx' ? 'bg-blue-100 text-blue-700' :
+                          'bg-emerald-100 text-emerald-700']">
+                      {{ p.entity_type === 'asecalidad' ? 'ASECALIDAD' : p.entity_type === 'imavicx' ? 'IMAVICX' :
+                      'Profesional' }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.professional_name }}</td>
+
                 <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.amount_formatted }}</td>
                 <td class="px-5 py-3 text-[12px] text-slate-500">{{ methodLabel(p.payment_method) }}</td>
                 <td class="px-5 py-3">
@@ -468,7 +483,15 @@ const disburse = async (srId) => {
   try {
     const { data } = await api.post(`/admin/payouts/${srId}/disburse`)
     disburseResult.value = { success: data.success, message: data.message }
-    if (data.success) await Promise.all([loadPending(), loadPayouts(), loadStats()])
+    if (data.success) {
+      // Quitar el SR de la lista local inmediatamente
+      if (pending.value?.data) {
+        pending.value.data = pending.value.data.filter(sr => sr.id !== srId)
+      }
+      await Promise.all([loadPayouts(), loadStats()])
+      // Recargar pendientes después de un momento para reflejar estado real
+      setTimeout(() => loadPending(), 2000)
+    }
   } catch (e) {
     disburseResult.value = { success: false, message: e.response?.data?.message ?? 'Error al dispersar' }
   } finally {
