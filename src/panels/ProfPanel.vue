@@ -1036,7 +1036,7 @@
                               ? verDocFileName(verExistingFiles[doc.key]) + ' (cambiar)'
                               : 'Seleccionar archivo...' }}
                       </span>
-                      <input type="file" accept=".jpg,.jpeg,.png,.pdf" class="hidden" @change="e => handleVerFile(doc.key, e.target.files[0])" />
+                      <input type="file" :accept="doc.key === 'professional_card' ? 'image/*,.jpg,.jpeg,.png' : '.jpg,.jpeg,.png,.pdf'" class="hidden" @change="e => handleVerFile(doc.key, e.target.files[0])" />
                     </label>
 
                     <!-- Vista previa del archivo existente -->
