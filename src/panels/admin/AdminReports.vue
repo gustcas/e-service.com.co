@@ -208,7 +208,7 @@
                 class="w-8 h-8 rounded-xl border border-slate-100 flex-shrink-0" />
               <div class="flex-1 min-w-0">
                 <p class="font-semibold text-[#0f172a] text-[13px] truncate">{{ p.name }}</p>
-                <p class="text-[11px] text-slate-400">{{ p.jobs }} trabajo{{ p.jobs !== 1 ? 's' : '' }}</p>
+                <p class="text-[11px] text-slate-400">{{ p.jobs }} trabajo{{ p.jobs !== 1 ? 's' : '' }} · Bruto: ${{ Number(p.revenue).toLocaleString('es-CO') }} · Neto: ${{ Number(p.net_revenue).toLocaleString('es-CO') }}</p>
               </div>
               <span class="font-bold text-[13px] text-[#0f172a] flex-shrink-0">{{ formatCOP(p.revenue) }}</span>
             </div>
@@ -293,10 +293,11 @@ const byStatus = computed(() => {
   const s = report.value.by_status
   const progress = (Number(s.active) || 0) + (Number(s.accepted) || 0)
   return [
-    { label: 'Pendientes',  value: Number(s.pending)   || 0, dot: 'bg-amber-400',   bar: 'bg-amber-400'   },
-    { label: 'En progreso', value: progress,                  dot: 'bg-blue-500',    bar: 'bg-blue-500'    },
-    { label: 'Completadas', value: Number(s.completed) || 0, dot: 'bg-emerald-500', bar: 'bg-emerald-500' },
-    { label: 'Canceladas',  value: Number(s.cancelled) || 0, dot: 'bg-red-500',     bar: 'bg-red-500'     },
+    { label: 'Pago pendiente', value: Number(s.payment_pending) || 0, dot: 'bg-orange-400',  bar: 'bg-orange-400'  },
+    { label: 'Pendientes',     value: Number(s.pending)         || 0, dot: 'bg-amber-400',   bar: 'bg-amber-400'   },
+    { label: 'En progreso',    value: progress,                        dot: 'bg-blue-500',    bar: 'bg-blue-500'    },
+    { label: 'Completadas',    value: Number(s.completed)       || 0, dot: 'bg-emerald-500', bar: 'bg-emerald-500' },
+    { label: 'Canceladas',     value: Number(s.cancelled)       || 0, dot: 'bg-red-500',     bar: 'bg-red-500'     },
   ]
 })
 

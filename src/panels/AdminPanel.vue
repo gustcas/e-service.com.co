@@ -137,7 +137,7 @@
                       :stroke-dashoffset="`-${seg.offset}`" />
                   </svg>
                   <div class="absolute inset-0 flex flex-col items-center justify-center">
-                    <p class="text-xl font-black text-[#0f172a]">{{ dashRaw.totalServices.toLocaleString('es-CO') }}</p>
+                    <p class="text-xl font-black text-[#0f172a]">{{ (dashRaw.acceptedRequests + dashRaw.completedRequests).toLocaleString('es-CO') }}</p>
                     <p class="text-[11px] text-slate-400">Total</p>
                   </div>
                 </div>
@@ -413,7 +413,7 @@ const dashRaw = ref({
   activeUsers: 0, inactiveUsers: 0, pendingProfessionals: 0,
   totalRequests: 0, pendingRequests: 0, acceptedRequests: 0,
   completedRequests: 0, cancelledRequests: 0, todayRequests: 0,
-  totalCollected: 0, totalServices: 0,
+  totalCollected: 0, totalServices: 0, paymentPendingRequests: 0,
 })
 
 const formatCOP = (v) =>
@@ -452,7 +452,8 @@ const fetchDashStats = async () => {
         pendingRequests:      n('pendingRequests',       'pending_requests'),
         acceptedRequests:     n('acceptedRequests',      'accepted_requests'),
         completedRequests:    n('completedRequests',     'completed_requests'),
-        cancelledRequests:    n('cancelledRequests',     'cancelled_requests'),
+        cancelledRequests:      n('cancelledRequests',       'cancelled_requests'),
+        paymentPendingRequests: n('paymentPendingRequests',  'payment_pending'),
         todayRequests:        n('todayRequests',         'today_requests',        'requests_today'),
         totalCollected:       n('totalCollected',        'total_collected',       'revenue_total', 'collected'),
         totalServices:        n('totalServices',         'total_services',        'services'),
@@ -461,18 +462,20 @@ const fetchDashStats = async () => {
       if (s.incomeByDay) incomeByDayData.value = s.incomeByDay
     }
 
-    // Categorías para donut1
-    if (catRes.status === 'fulfilled') {
-      const cats = (catRes.value.data.categories ?? catRes.value.data ?? [])
+    // Categorías para donut1 — usar solicitudes por categoría del reporte
+    try {
+      const repRes = await api.get('/admin/reports')
+      const byCat = repRes.data?.data?.by_category ?? []
+      const cats = byCat
         .map((c, i) => ({
           label: c.name,
-          value: Array.isArray(c.services) ? c.services.length : (c.services_count ?? 0),
+          value: Number(c.total) || 0,
           color: catColors[i % catColors.length],
         }))
         .filter(c => c.value > 0)
         .sort((a, b) => b.value - a.value)
       categoriesChartData.value = cats
-    }
+    } catch { /* mantener vacío */ }
   } catch { /* usa 0s */ }
   finally { dashLoading.value = false }
 }
@@ -557,12 +560,13 @@ const donut1 = computed(() => {
 // Donut 2 — solicitudes por estado (datos reales)
 const donut2 = computed(() => {
   const d = dashRaw.value
-  const total = (d.pendingRequests + d.acceptedRequests + d.completedRequests + d.cancelledRequests) || 1
+  const total = (d.paymentPendingRequests + d.pendingRequests + d.acceptedRequests + d.completedRequests + d.cancelledRequests) || 1
   const segs = [
-    { label:'Pendientes',  value: d.pendingRequests,   color:'#7c3aed' },
-    { label:'En progreso', value: d.acceptedRequests,  color:'#0891b2' },
-    { label:'Completadas', value: d.completedRequests, color:'#10b981' },
-    { label:'Canceladas',  value: d.cancelledRequests, color:'#ef4444' },
+    { label:'Pago pendiente', value: d.paymentPendingRequests || 0, color:'#f97316' },
+    { label:'Pendientes',     value: d.pendingRequests,              color:'#7c3aed' },
+    { label:'En progreso',    value: d.acceptedRequests,             color:'#0891b2' },
+    { label:'Completadas',    value: d.completedRequests,            color:'#10b981' },
+    { label:'Canceladas',     value: d.cancelledRequests,            color:'#ef4444' },
   ].map(s => ({ ...s, pct: Math.round((s.value / total) * 100) }))
   let offset = 0
   return segs.map(s => {
