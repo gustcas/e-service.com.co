@@ -755,7 +755,34 @@
             <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white text-center">
               <p class="font-black text-base">¿No encontraste lo que buscabas?</p>
               <p class="text-[13px] text-blue-200 mt-1 mb-4">Nuestro equipo está disponible 24/7</p>
-              <button class="bg-white text-[#2563ff] font-bold text-[13px] px-6 py-2 rounded-xl hover:bg-blue-50 transition">Contactar soporte</button>
+              <button @click="showSupportModal = true" class="bg-white text-[#2563ff] font-bold text-[13px] px-6 py-2 rounded-xl hover:bg-blue-50 transition">Contactar soporte</button>
+
+              <!-- Modal soporte -->
+              <Teleport to="body">
+                <Transition name="fade">
+                  <div v-if="showSupportModal" class="fixed inset-0 z-[200] flex items-center justify-center p-4" style="background:rgba(15,23,42,.6)" @click.self="showSupportModal = false">
+                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                      <div class="flex items-center justify-between">
+                        <p class="font-black text-[#0f172a] text-[16px]">📞 Contactar soporte</p>
+                        <button @click="showSupportModal = false" class="text-slate-400 hover:text-slate-600 text-xl">×</button>
+                      </div>
+                      <p class="text-[13px] text-slate-500">Nuestro equipo está disponible para ayudarte. Copia el número y contáctanos:</p>
+                      <div class="space-y-3">
+                        <div v-for="contact in supportContacts" :key="contact.label" class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3">
+                          <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase">{{ contact.label }}</p>
+                            <p class="font-black text-[#0f172a] text-[15px]">{{ contact.number }}</p>
+                          </div>
+                          <button @click="copyToClipboard(contact.number)"
+                            class="text-[12px] font-bold text-[#2563ff] border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition">
+                            📋 Copiar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Transition>
+              </Teleport>
             </div>
           </div>
         </template>
@@ -1878,25 +1905,62 @@ const openChatWithPro = (req) => {
   })
 }
 
+const showSupportModal = ref(false)
+const supportContacts = [
+  { label: 'Celular',  number: '+57 300 123 4567' },
+  { label: 'Celular',  number: '+57 601 234 5678' },
+  { label: 'Celular',   number: '+57 310 987 6543' },
+]
+const copyToClipboard = (text) => {
+  navigator.clipboard.writeText(text).then(() => showToast('Número copiado', 'success'))
+}
+
 const isCapacitacionReq = (req) => ['certificacion_virtual', 'certificacion_presencial'].includes(req.form_type ?? '') || /capacit/i.test(req.category_name ?? '')
 const isSaneamientoReq = (req) => /saneamiento/i.test(req.category_name ?? req.name ?? '')
 
 const downloadActa = async (req) => {
   try {
-    const downloads = [
-      { endpoint: 'plan',  name: `Plan_Capacitacion_${req.num}.pdf` },
-      { endpoint: 'eval',  name: `Evaluacion_${req.num}.pdf` },
-      { endpoint: 'video', name: `Video_${req.num}.pdf` },
-    ]
-    for (const doc of downloads) {
+    const isVirtualReq = ['certificacion_virtual', 'virtual_participantes'].includes(req.form_type ?? '')
+
+    // Plan
+    try {
+      const res = await api.get(`/client/requests/${req.id}/certification-document/plan`, { responseType: 'blob' })
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const a = document.createElement('a'); a.href = url
+      a.download = `Plan_Capacitacion_${req.num}.pdf`; a.click(); URL.revokeObjectURL(url)
+      await new Promise(r => setTimeout(r, 500))
+    } catch { /* continuar */ }
+
+    // Evaluación — virtual: una por participante / presencial: en blanco
+    if (isVirtualReq) {
+      const count = req.people_count || 1
+      for (let i = 0; i < count; i++) {
+        try {
+          const res = await api.get(`/client/requests/${req.id}/certification-document/eval/${i}`, { responseType: 'blob' })
+          const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+          const a = document.createElement('a'); a.href = url
+          a.download = `Evaluacion_${req.num}_p${i + 1}.pdf`; a.click(); URL.revokeObjectURL(url)
+          await new Promise(r => setTimeout(r, 600))
+        } catch { /* continuar */ }
+      }
+    } else {
       try {
-        const res = await api.get(`/client/requests/${req.id}/certification-document/${doc.endpoint}`, { responseType: 'blob' })
+        const res = await api.get(`/client/requests/${req.id}/certification-document/eval`, { responseType: 'blob' })
         const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
-        const a   = document.createElement('a'); a.href = url
-        a.download = doc.name; a.click(); URL.revokeObjectURL(url)
+        const a = document.createElement('a'); a.href = url
+        a.download = `Evaluacion_${req.num}.pdf`; a.click(); URL.revokeObjectURL(url)
         await new Promise(r => setTimeout(r, 500))
-      } catch { /* si un archivo no existe, continuar con el siguiente */ }
+      } catch { /* continuar */ }
     }
+
+    // Video
+    try {
+      const res = await api.get(`/client/requests/${req.id}/certification-document/video`, { responseType: 'blob' })
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const a = document.createElement('a'); a.href = url
+      a.download = `Video_${req.num}.pdf`; a.click(); URL.revokeObjectURL(url)
+    } catch { /* continuar */ }
+
   } catch { showToast('No se pudo descargar el acta', 'error') }
 }
 
