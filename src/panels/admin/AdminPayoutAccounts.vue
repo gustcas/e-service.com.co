@@ -175,18 +175,14 @@ const showModal = ref(false)
 const editing   = ref(null)
 const saving    = ref(false)
 
-const banks = [
-  { code: 'BANCOLOMBIA',          name: 'Bancolombia'          },
-  { code: 'BANCO_BOGOTA',         name: 'Banco de Bogotá'      },
-  { code: 'DAVIVIENDA',           name: 'Davivienda'           },
-  { code: 'BBVA',                 name: 'BBVA Colombia'        },
-  { code: 'BANCO_POPULAR',        name: 'Banco Popular'        },
-  { code: 'BANCO_OCCIDENTE',      name: 'Banco de Occidente'   },
-  { code: 'AV_VILLAS',            name: 'Banco AV Villas'      },
-  { code: 'BANCO_AGRARIO',        name: 'Banco Agrario'        },
-  { code: 'ITAU',                 name: 'Itaú Colombia'        },
-  { code: 'SCOTIABANK_COLPATRIA', name: 'Scotiabank Colpatria' },
-]
+const banks = ref([])
+
+const loadBanks = async () => {
+  try {
+    const { data } = await api.get('/admin/banks')
+    if (data?.banks?.length) banks.value = data.banks
+  } catch { /* usar fallback */ }
+}
 
 const form = reactive({
   entity_name:    '',
@@ -216,7 +212,7 @@ const entityTypeColor = (type) => {
 }
 
 const onBankChange = () => {
-  const bank = banks.find(b => b.code === form.bank_code)
+  const bank = banks.value.find(b => b.code === form.bank_code)
   form.bank_name = bank ? bank.name : ''
 }
 
@@ -292,5 +288,8 @@ const deleteAccount = async (id) => {
   } catch { /* silenciar */ }
 }
 
-onMounted(loadAccounts)
+onMounted(async () => {
+  await Promise.all([loadAccounts(), loadBanks()])
+})
+
 </script>

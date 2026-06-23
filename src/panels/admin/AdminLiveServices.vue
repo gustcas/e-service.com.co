@@ -64,7 +64,7 @@
         <button v-if="search" @click="search = ''"
           class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs hover:text-slate-600">✕</button>
       </div>
-      <div v-if="activeTab === 'requests'" class="flex gap-1.5 flex-wrap">
+      <div v-if="activeTab === 'requests'" class="flex items-center gap-1.5 flex-wrap">
         <button v-for="s in statusFilters" :key="s.value"
           :class="['flex items-center gap-1.5 px-3 py-2 border rounded-xl text-[12px] font-semibold transition-all',
             statusFilter === s.value
@@ -74,6 +74,9 @@
           <span v-if="s.value" :class="['w-1.5 h-1.5 rounded-full flex-shrink-0', statusDotColor(s.value)]"></span>
           {{ s.label }}
         </button>
+        <span class="ml-2 text-[12px] font-bold text-slate-400">
+          {{ statusFilter ? statusFilters.find(s => s.value === statusFilter)?.label : 'Total' }}: {{ filteredRequests.length }}
+        </span>
       </div>
     </div>
 
@@ -635,7 +638,7 @@
                   </div>
                   </div>
                 <!-- Documentación del servicio -->
-                <div v-if="detailModal.req.status === 'completed'" class="space-y-2">
+                <div v-if="detailModal.req.status === 'completed' || detailModal.req.status === 'accepted'" class="space-y-2">
                   <p class="text-[11px] font-black text-blue-600 uppercase tracking-wide pb-1.5 border-b border-slate-100">📄 Documentación del servicio</p>
                   <div v-if="adminDocList(detailModal.req).length === 0" class="text-[13px] text-slate-400 py-2">Sin documentación registrada.</div>
                   <div v-else class="grid grid-cols-3 gap-2.5 pt-1">
@@ -834,11 +837,12 @@ const tabs = [
 ]
 
 const statusFilters = [
-  { value: '',          label: 'Todos'       },
-  { value: 'pending',   label: 'Pendientes'  },
-  { value: 'accepted',  label: 'Aceptadas'   },
-  { value: 'completed', label: 'Completadas' },
-  { value: 'cancelled', label: 'Canceladas'  },
+  { value: '',                label: 'Todos'           },
+  { value: 'payment_pending', label: 'Pago pendiente'  },
+  { value: 'pending',         label: 'Pendientes'      },
+  { value: 'accepted',        label: 'Aceptadas'       },
+  { value: 'completed',       label: 'Completadas'     },
+  { value: 'cancelled',       label: 'Canceladas'      },
 ]
 
 const tabBadge = (key) => {
@@ -876,17 +880,21 @@ const statusBadgeClass = (s) => ({
 }[s] ?? 'bg-slate-100 text-slate-500')
 
 const statusLabel = (s) => ({
-  pending:   'Pendiente',
-  accepted:  'Aceptada',
-  completed: 'Completada',
-  cancelled: 'Cancelada',
+  pending:         'Pendiente',
+  payment_pending:  'Pago pendiente',
+  payment_failed:   'Pago declinado',
+  accepted:        'Aceptada',
+  completed:       'Completada',
+  cancelled:       'Cancelada',
 }[s] ?? s ?? '—')
 
 const statusDotColor = (v) => ({
-  pending:   'bg-amber-400',
-  accepted:  'bg-emerald-400',
-  completed: 'bg-blue-500',
-  cancelled: 'bg-slate-400',
+  pending:         'bg-amber-400',
+  payment_pending:  'bg-orange-400',
+  payment_failed:   'bg-red-400',
+  accepted:        'bg-emerald-400',
+  completed:       'bg-blue-500',
+  cancelled:       'bg-slate-400',
 }[v] ?? 'bg-slate-400')
 
 const isSlowElapsed = (e) => e && (e.includes('h') || e.includes('d'))
@@ -1048,6 +1056,8 @@ const openDetail = async (req) => {
 }
 
 const downloadAdminDoc = async (req, type) => {
+    console.log('req.form_type:', req.form_type, 'req.people_count:', req.people_count)
+
 let endpoint = ''
   let filename  = ''
 
@@ -1055,11 +1065,30 @@ let endpoint = ''
     endpoint = `/admin/requests/${req.id}/certification-document/plan`
     filename  = `Plan_Capacitacion_${req.id}.pdf`
   } else if (type === 'eval') {
+    const isVirtual = ['certificacion_virtual', 'virtual_participantes'].includes(req.form_type)
+    if (isVirtual) {
+      // Una descarga por participante
+      const count = req.people_count || 1
+      for (let i = 0; i < count; i++) {
+        try {
+          const res = await api.get(`/admin/requests/${req.id}/certification-document/eval/${i}`, { responseType: 'blob' })
+          const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+          const a   = document.createElement('a'); a.href = url
+          a.download = `Evaluacion_${String(req.id).padStart(4,'0')}_participante_${i+1}.pdf`
+          a.click(); URL.revokeObjectURL(url)
+          await new Promise(r => setTimeout(r, 500))
+        } catch { /* saltar si no disponible */ }
+      }
+      return
+    }
     endpoint = `/admin/requests/${req.id}/certification-document/eval`
     filename  = `Evaluacion_${req.id}.pdf`
   } else if (type === 'video') {
     endpoint = `/admin/requests/${req.id}/certification-document/video`
     filename  = `Video_${req.id}.pdf`
+  } else if (type === 'eval-blank') {
+    endpoint = `/admin/requests/${req.id}/certification-document/eval-blank`
+    filename  = `Evaluacion_Blanco_${req.id}.pdf`
   } else if (type === 'saneamiento') {
     endpoint = `/admin/requests/${req.id}/saneamiento-document-admin`
     filename  = `PlanSaneamiento_${req.id}.pdf`
@@ -1087,11 +1116,17 @@ const downloadEvidence = (ev) => {
 }
 
 const adminDocList = (req) => {
-  const isCert  = /capacit/i.test(req.category_name ?? req.service_name ?? '')
+  const ft = req.form_type ?? ''
+  const CERT_TYPES = ['certificacion_virtual', 'certificacion_presencial', 'virtual_participantes', 'presencial_participantes']
+  const isCert  = CERT_TYPES.includes(ft)
   const isSaneo = /saneamiento/i.test(req.category_name ?? req.service_name ?? '')
+  const isPresencial = ft === 'certificacion_presencial' || ft === 'presencial_participantes'
   if (isCert) return [
     { type: 'plan',  label: 'Plan de Capacitación' },
-    { type: 'eval',  label: 'Evaluación' },
+    ...(isPresencial
+      ? [{ type: 'eval-blank', label: 'Evaluación en blanco' }]
+      : [{ type: 'eval',      label: 'Evaluación' }]
+    ),
     { type: 'video', label: 'Video' },
   ]
   if (isSaneo) return [

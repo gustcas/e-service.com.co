@@ -595,8 +595,10 @@
           </div>
           <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <span class="font-black text-[#0f172a]">Historial de ingresos</span>
-              <button class="text-[13px] font-semibold text-[#2563ff] border border-blue-200 px-4 py-1.5 rounded-xl hover:bg-blue-50 transition">Descargar</button>
+              <div class="flex items-center gap-3">
+                <span class="font-black text-[#0f172a]">Historial de ingresos</span>
+                <span class="text-[12px] font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">{{ incomeHistory.length }} servicios</span>
+              </div>
             </div>
             <!-- Mobile cards (< md) -->
             <div class="md:hidden divide-y divide-slate-50">
@@ -633,10 +635,11 @@
             <div class="hidden md:block overflow-x-auto">
               <table class="w-full text-sm min-w-[500px]">
                 <thead class="bg-slate-50">
-                  <tr><th v-for="h in ['Servicio','Cliente','Fecha','Monto','Estado']" :key="h" class="text-left px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th></tr>
+                  <tr><th v-for="h in ['ID Servicio','Servicio','Cliente','Fecha','Monto','Estado']" :key="h" class="text-left px-6 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th></tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
-                  <tr v-for="p in incomeHistory" :key="p.id" class="hover:bg-slate-50 transition">
+                  <tr v-for="p in incomePagedItems" :key="p.id" class="hover:bg-slate-50 transition">
+                    <td class="px-6 py-4"><span class="bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5 rounded">#{{ String(p.id).padStart(4,'0') }}</span></td>
                     <td class="px-6 py-4 font-semibold text-[#0f172a] text-[13px]">{{ p.service }}</td>
                     <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.client }}</td>
                     <td class="px-6 py-4 text-slate-400 text-[13px]">{{ p.date }}</td>
@@ -654,6 +657,13 @@
                   </tr>
                 </tbody>
               </table>
+              <div v-if="incomeTotalPages > 1" class="hidden md:flex items-center justify-center gap-3 px-5 py-3 border-t border-slate-100">
+              <button :disabled="incomePage <= 1" @click="incomePage--"
+                class="px-3 py-1.5 bg-slate-100 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-200 transition disabled:opacity-40">← Anterior</button>
+              <span class="text-[12px] text-slate-500 font-semibold">{{ incomePage }} / {{ incomeTotalPages }}</span>
+              <button :disabled="incomePage >= incomeTotalPages" @click="incomePage++"
+                class="px-3 py-1.5 bg-slate-100 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-200 transition disabled:opacity-40">Siguiente →</button>
+            </div>
             </div>
           </div>
         </template>
@@ -2644,7 +2654,13 @@ const incomeMobilePagedItems = computed(() => {
   return incomeHistory.slice(start, start + INCOME_MOBILE_PG)
 })
 const incomeMobileTotalPages = computed(() => Math.ceil(incomeHistory.length / INCOME_MOBILE_PG))
-
+const INCOME_PAGE = 10
+const incomePage  = ref(1)
+const incomePagedItems = computed(() => {
+  const start = (incomePage.value - 1) * INCOME_PAGE
+  return incomeHistory.slice(start, start + INCOME_PAGE)
+})
+const incomeTotalPages = computed(() => Math.max(1, Math.ceil(incomeHistory.length / INCOME_PAGE)))
 // ─── Estadísticas ─────────────────────────────────────────────────────────────
 // Helpers de formato y escala
 const fmtAmt = (v) => {
