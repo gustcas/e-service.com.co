@@ -193,6 +193,7 @@
             <option value="approved">Aprobados</option>
             <option value="pending">Pendientes</option>
             <option value="failed">Fallidos</option>
+            <option value="declined">Declinados</option>
           </select>
         </div>
 
@@ -399,7 +400,7 @@ import { ref, watch, onMounted } from 'vue'
 import api from '@/services/api'
 
 const loading        = ref(false)
-const activeTab      = ref('pending')
+const activeTab = ref('payments')
 const paymentFilter  = ref('')
 const payoutFilter   = ref('')
 const disbursing     = ref(null)
@@ -429,10 +430,11 @@ const fmtDateTime = (d) => {
   return date.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-const statusLabel = (s) => ({ approved: 'Aprobado', pending: 'Pendiente', failed: 'Fallido', processing: 'En proceso' }[s] ?? s)
+const statusLabel = (s) => ({ approved: 'Aprobado', pending: 'Pendiente', declined: 'Declinado', failed: 'Fallido', processing: 'En proceso' }[s] ?? s)
 const statusClass = (s) => ({
   approved:   'bg-emerald-100 text-emerald-700',
   pending:    'bg-amber-100 text-amber-700',
+  declined:   'bg-orange-100 text-orange-600',
   failed:     'bg-red-100 text-red-600',
   processing: 'bg-blue-100 text-blue-700',
 }[s] ?? 'bg-slate-100 text-slate-600')

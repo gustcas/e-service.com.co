@@ -232,19 +232,22 @@
                       :class="['w-full border rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-teal-500/30', errors.email ? 'border-red-400' : 'border-slate-200']" />
                     <p v-if="errors.email" class="text-[11px] text-red-500 mt-1">{{ errors.email }}</p>
                   </div>
-                  <div>
-                    <label class="block text-[12px] font-bold text-slate-500 mb-1">Contraseña *</label>
-                    <div class="relative">
-                      <input v-model="form.password" :type="showPwd ? 'text' : 'password'" placeholder="Mínimo 8 caracteres"
-                        :class="['w-full border rounded-xl px-3 py-2.5 pr-10 text-[13px] focus:outline-none focus:ring-2 focus:ring-teal-500/30', errors.password ? 'border-red-400' : 'border-slate-200']" />
-                      <button type="button" @click="showPwd = !showPwd"
-                        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
-                        {{ showPwd ? 'Ocultar' : 'Ver' }}
-                      </button>
-                    </div>
-                    <p v-if="errors.password" class="text-[11px] text-red-500 mt-1">{{ errors.password }}</p>
-                  </div>
                 </template>
+                <div>
+                  <label class="block text-[12px] font-bold text-slate-500 mb-1">
+                    {{ modal.mode === 'create' ? 'Contraseña *' : 'Nueva contraseña (dejar vacío para no cambiar)' }}
+                  </label>
+                  <div class="relative">
+                    <input v-model="form.password" :type="showPwd ? 'text' : 'password'"
+                      :placeholder="modal.mode === 'create' ? 'Mínimo 8 caracteres' : 'Nueva contraseña'"
+                      :class="['w-full border rounded-xl px-3 py-2.5 pr-10 text-[13px] focus:outline-none focus:ring-2 focus:ring-teal-500/30', errors.password ? 'border-red-400' : 'border-slate-200']" />
+                    <button type="button" @click="showPwd = !showPwd"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                      {{ showPwd ? 'Ocultar' : 'Ver' }}
+                    </button>
+                  </div>
+                  <p v-if="errors.password" class="text-[11px] text-red-500 mt-1">{{ errors.password }}</p>
+                </div>
               </div>
 
               <!-- Módulos -->
@@ -389,7 +392,9 @@ const activePermsShort = (permsObj) =>
 
 const fmtDate = (d) => {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+  const date = new Date(d.replace(' ', 'T'))
+  if (isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 const filtered = computed(() => {
@@ -468,7 +473,8 @@ const validate = () => {
   if (!form.name.trim()) { errors.name = 'El nombre es obligatorio.'; ok = false }
   if (modal.mode === 'create') {
     if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) { errors.email = 'Ingresa un correo válido.'; ok = false }
-    if (form.password.length < 8) { errors.password = 'La contraseña debe tener al menos 8 caracteres.'; ok = false }
+    if (modal.value.mode === 'create' && form.password.length < 8) { errors.password = 'La contraseña debe tener al menos 8 caracteres.'; ok = false }
+    if (modal.value.mode === 'edit' && form.password && form.password.length < 8) { errors.password = 'La contraseña debe tener al menos 8 caracteres.'; ok = false }
   }
   return ok
 }
