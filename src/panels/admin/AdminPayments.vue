@@ -143,7 +143,7 @@
           <table class="w-full text-sm min-w-[740px]">
             <thead class="bg-slate-50">
               <tr>
-                <th v-for="h in ['ID Servicio','SR#','Servicio','Profesional','Monto bruto','Neto profesional','ASECALIDAD','IMAVICX','Estado','Última actualización','Acción']" :key="h"
+                <th v-for="h in ['ID Servicio','SR#','Servicio','Profesional','Monto bruto','Neto profesional','ASECALIDAD','IMAVICX','Mantenimiento','Estado','Última actualización','Acción']" :key="h"
                   class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
               </tr>
             </thead>
@@ -156,6 +156,7 @@
          <td class="px-5 py-3 font-bold text-[13px] text-emerald-600">{{ sr.net_amount_formatted ?? '—' }}</td>
          <td class="px-5 py-3 font-bold text-[13px] text-purple-600">{{ sr.asecalidad_amount_formatted ?? '—' }}</td>
                 <td class="px-5 py-3 font-bold text-[13px] text-blue-600">{{ sr.imavicx_amount_formatted ?? '—' }}</td>
+         <td class="px-5 py-3 font-bold text-[13px] text-slate-500">{{ sr.maintenance_amount_formatted ?? '—' }}</td>
                 <td class="px-5 py-3">
                   <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full',
                     sr.payout_status === 'payout_failed' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700']">
