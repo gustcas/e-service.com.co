@@ -33,10 +33,7 @@
           </div>
         </div>
         <div class="flex items-center gap-2.5">
-          <button v-if="page === 'Inicio'" @click="openSvcModal(null)" class="hidden md:flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[13px] font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition shadow-sm">
-            Publicar servicio
-            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-          </button>
+          
           <!-- Campana notificaciones -->
           <div class="relative" ref="notifBtnRef">
             <button @click.stop="notifPanelOpen = !notifPanelOpen"
@@ -104,14 +101,6 @@
             </svg>
           </button>
         </div>
-      </div>
-
-      <!-- Publicar servicio — solo mobile, debajo del header -->
-      <div v-if="page === 'Inicio'" class="md:hidden flex-shrink-0 px-4 py-2.5 border-b border-slate-100">
-        <button @click="openSvcModal(null)" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[13px] font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition shadow-sm">
-          Publicar servicio
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-        </button>
       </div>
 
       <!-- Content -->
@@ -797,7 +786,10 @@
                   <span class="text-[11px] text-slate-400 ml-1">4.9</span>
                 </div>
               </div>
-              <button class="w-full border border-slate-200 text-[13px] font-semibold text-slate-600 py-2 rounded-xl hover:bg-slate-50 transition">Cambiar foto</button>
+              <label class="w-full border border-slate-200 text-[13px] font-semibold text-slate-600 py-2 rounded-xl hover:bg-slate-50 transition cursor-pointer text-center block">
+                Cambiar foto
+                <input type="file" accept="image/*" class="hidden" @change="uploadProfPhoto" />
+              </label>
             </div>
           </div>
         </template>
@@ -1317,7 +1309,7 @@
                 <div v-else class="ev-file-icon">{{ ev.file_type === 'video' ? '🎥' : '📄' }}</div>
               </div>
               <p class="ev-note">{{ ev.note || 'Sin nota' }}</p>
-              <span class="ev-date">{{ ev.created_at }}</span>
+              <span class="ev-date">{{ ev.created_at ? (/^\d{2}:\d{2}$/.test(String(ev.created_at)) ? ev.created_at : new Date(String(ev.created_at).replace(' ','T')).toLocaleString('es-CO', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})) : '' }}</span>
             </div>
           </div>
           <p v-else class="no-evidences">Aún no hay evidencias subidas.</p>
@@ -2146,6 +2138,20 @@ const getMyLocation = () => {
   )
 }
 
+const uploadProfPhoto = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  const fd = new FormData()
+  fd.append('photo', file)
+  try {
+    const { data } = await api.post('/professional/photo', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    if (data.success) {
+      verExistingFiles.photo = data.photo_url
+      showToast('Foto actualizada', 'success')
+    }
+  } catch { showToast('Error al subir foto', 'error') }
+}
+
 const createClientIcon = () => L.divIcon({
   className: '',
   html: `<div class="client-marker"><div class="client-ring"></div><div class="client-core"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" width="12" height="12"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div></div>`,
@@ -2418,7 +2424,7 @@ const loadJobs = async () => {
       client_phone: r.client_phone ?? '',
       service:      r.service_name ?? '—',
       service_name: r.service_name ?? '—',
-      date:         r.service_date ? new Date(r.service_date).toLocaleDateString('es-CO') : '—',
+      date: r.service_date ? new Date(String(r.service_date).replace(' ','T')).toLocaleDateString('es-CO') : '—',
       time:         r.service_time ?? '',
       price:        Number(r.budget ?? 0).toLocaleString('es-CO'),
       budget:       r.budget ?? 0,
@@ -2448,7 +2454,7 @@ const loadAcceptedRequests = async () => {
         client:       r.client_name  ?? '—',
         client_phone: r.client_phone ?? '',
         service:      r.service_name ?? '—',
-        date:         r.service_date ? new Date(r.service_date).toLocaleDateString('es-CO') : '—',
+        date: r.service_date ? new Date(String(r.service_date).replace(' ','T')).toLocaleDateString('es-CO') : '—',
         time:         r.service_time ?? '',
         price:        Number(r.budget ?? 0).toLocaleString('es-CO'),
         status:       r.status === 'accepted' ? 'Confirmada' : r.status === 'completed' ? 'Completada' : 'Pendiente',
@@ -2610,7 +2616,7 @@ const loadMessages = async (convId) => {
         id:   m.id,
         text: m.message ?? m.text ?? '',
         mine: m.sender_id === authStore.user?.id || m.is_mine,
-        time: m.created_at ? new Date(m.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : m.time ?? '',
+        time: m.created_at ? (/^\d{2}:\d{2}$/.test(String(m.created_at)) ? String(m.created_at) : new Date(String(m.created_at).replace(' ','T')).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})) : m.time ?? '',
       }))
     }
   } catch { /* ignore */ }
@@ -2890,8 +2896,10 @@ const loadVerProfile = async () => {
       if (prof.professional_title) verExistingFiles.professional_title = base + prof.professional_title
 
       // Rating del dashboard si el backend lo devuelve
-      if (prof.avg_rating != null)   profAvgRating.value   = Number(prof.avg_rating)
-      if (prof.review_count != null) profReviewCount.value = Number(prof.review_count)
+      if (prof.avg_rating != null)                       profAvgRating.value   = Number(prof.avg_rating)
+      if (prof.review_count != null)                     profReviewCount.value = Number(prof.review_count)
+      if (profRes.data?.stats?.avg_rating != null)       profAvgRating.value   = Number(profRes.data.stats.avg_rating)
+      if (profRes.data?.stats?.review_count != null)     profReviewCount.value = Number(profRes.data.stats.review_count)
     }
 
     // Calcular rating desde trabajos completados si el dashboard no lo trae

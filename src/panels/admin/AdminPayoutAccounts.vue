@@ -140,8 +140,7 @@
 
             <!-- Activa -->
             <div class="flex items-center gap-3">
-              <input type="checkbox" v-model="form.is_active" id="isActive" class="w-4 h-4 rounded" />
-              <label for="isActive" class="text-[13px] font-semibold text-slate-600">Cuenta activa</label>
+              <input type="hidden" name="is_active" value="1" />
             </div>
 
             <!-- Botones -->
@@ -239,7 +238,7 @@ const openModal = (acc) => {
       account_holder: acc.account_holder,
       document_number:acc.document_number ?? '',
       email:          acc.email           ?? '',
-      is_active:      acc.is_active,
+      is_active:      true,
     })
   } else {
     Object.assign(form, {

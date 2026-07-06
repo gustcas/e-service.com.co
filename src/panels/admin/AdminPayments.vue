@@ -86,8 +86,14 @@
         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
             <p class="font-black text-[#0f172a]">Pendientes de dispersar</p>
+            <p class="text-[12px] text-slate-400 mt-0.5">Servicios completados y pagados donde el profesional aún no ha recibido su pago</p>
           </div>
-          <p class="text-[12px] text-slate-400">Servicios completados y pagados donde el profesional aún no ha recibido su pago</p>
+          <button @click="dispersarTodos" :disabled="dispersando || !pending.data?.length"
+            class="flex items-center gap-2 bg-[#0d4f5c] text-white text-[13px] font-bold px-4 py-2 rounded-xl hover:opacity-90 transition disabled:opacity-60">
+            <svg v-if="dispersando" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+            <span v-else>💸</span>
+            Dispersar todos
+          </button>
         </div>
 
         <!-- Disburse result -->
@@ -127,14 +133,6 @@
                   <p class="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Actualizado</p>
                   <p class="text-slate-500">{{ fmtDateTime(sr.updated_at) }}</p>
                 </div>
-              </div>
-              <div class="pt-2 border-t border-slate-50">
-                <button @click="disburse(sr.id)" :disabled="disbursing === sr.id"
-                  class="w-full flex items-center justify-center gap-1.5 bg-[#0d4f5c] text-white text-[12px] font-bold px-3 py-2 rounded-xl hover:opacity-90 transition disabled:opacity-60">
-                  <svg v-if="disbursing === sr.id" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                  <span v-else>💸</span>
-                  Dispersar
-                </button>
               </div>
             </div>
           </div>
@@ -219,7 +217,7 @@
         <template v-else>
           <!-- Mobile cards -->
           <div class="md:hidden space-y-3 p-3">
-            <div v-for="p in payments.data" :key="p.id" class="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
+            <div v-for="p in (payments.data || [])" :key="p?.id" class="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
               <div class="flex items-start justify-between gap-2">
                 <div>
                   <p class="font-bold text-[#0f172a] text-[13px]">{{ p.client_name }}</p>
@@ -243,6 +241,14 @@
                   <p class="text-slate-500">{{ fmtDateTime(p.paid_at ?? p.created_at) }}</p>
                 </div>
               </div>
+              <div class="pt-2 border-t border-slate-50">
+                <button @click="disburse(p.id)" :disabled="disbursing === p.id"
+                  class="w-full flex items-center justify-center gap-1.5 bg-[#0d4f5c] text-white text-[12px] font-bold px-3 py-2 rounded-xl hover:opacity-90 transition disabled:opacity-60">
+                  <svg v-if="disbursing === p.id" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                  <span v-else>💸</span>
+                  Dispersar
+                </button>
+              </div>
             </div>
           </div>
           <!-- Desktop table -->
@@ -255,7 +261,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
-              <tr v-for="p in payments.data" :key="p.id" class="hover:bg-slate-50 transition">
+              <tr v-for="p in (payments.data || [])" :key="p?.id" class="hover:bg-slate-50 transition">
                 <td class="px-5 py-3 font-mono text-[12px] text-slate-500">{{ p.id }}</td>
          <td class="px-5 py-3"><span class="bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-0.5 rounded">#{{ String(p.service_request_id ?? p.id).padStart(4,'0') }}</span></td>
                 <td class="px-5 py-3 font-mono text-[11px] text-slate-500">{{ p.reference }}</td>
@@ -286,7 +292,7 @@
       <!-- ── Tab: Dispersiones ── -->
       <div v-else-if="activeTab === 'payouts'" class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <p class="font-black text-[#0f172a]">Dispersiones al profesional</p>
+          <p class="font-black text-[#0f172a]">Dispersiones</p>
           <select v-model="payoutFilter" @change="loadPayouts()"
             class="px-3 py-1.5 rounded-xl border border-slate-200 text-[12px] text-slate-600 focus:outline-none bg-white">
             <option value="">Todos los estados</option>
@@ -340,7 +346,7 @@
           <table class="w-full text-sm min-w-[780px]">
             <thead class="bg-slate-50">
               <tr>
-                <th v-for="h in ['#','ID Servicio','Destinatario','Profesional','Monto','Método','Estado Wompi','Estado','Origen','Fecha']" :key="h"
+                <th v-for="h in ['#','ID Servicio','Destinatario','Profesional','Monto','Método','Estado Wompi','Estado','Origen','Fecha','']" :key="h"
                   class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
               </tr>
             </thead>
@@ -352,11 +358,13 @@
                         String(p.service_request_id ?? p.id).padStart(4,'0') }}</span></td>
                   <td class="px-5 py-3">
                     <span :class="['text-[10px] font-bold px-2 py-0.5 rounded-full',
-                      p.entity_type === 'asecalidad' ? 'bg-purple-100 text-purple-700' :
-                        p.entity_type === 'imavicx' ? 'bg-blue-100 text-blue-700' :
-                          'bg-emerald-100 text-emerald-700']">
-                      {{ p.entity_type === 'asecalidad' ? 'ASECALIDAD' : p.entity_type === 'imavicx' ? 'IMAVICX' :
-                      'Profesional' }}
+                      p.entity_type === 'asecalidad'  ? 'bg-purple-100 text-purple-700' :
+                      p.entity_type === 'imavicx'     ? 'bg-blue-100 text-blue-700' :
+                      p.entity_type === 'maintenance' ? 'bg-orange-100 text-orange-700' :
+                      'bg-emerald-100 text-emerald-700']">
+                      {{ p.entity_type === 'asecalidad' ? 'ASECALIDAD' :
+                         p.entity_type === 'imavicx' ? 'IMAVICX' :
+                         p.entity_type === 'maintenance' ? 'Mantenimiento' : 'Profesional' }}
                     </span>
                   </td>
                   <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.professional_name }}</td>
@@ -380,6 +388,15 @@
                   </span>
                 </td>
                 <td class="px-5 py-3 text-[12px] text-slate-400">{{ fmtDateTime(p.paid_at ?? p.created_at) }}</td>
+         <td class="px-5 py-3">
+           <button v-if="p.status === 'failed'" @click="reintentarFallidas(p.id)" :disabled="reintentando === p.id"
+  :class="{'opacity-60': dispersando}"
+             class="text-[11px] font-bold text-amber-600 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-50 transition disabled:opacity-60 flex items-center gap-1">
+             <svg v-if="reintentando === p.id" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+             <span v-else>🔄</span>
+             Reintentar
+           </button>
+         </td>
               </tr>
             </tbody>
           </table>
@@ -454,7 +471,7 @@ const loadPayments = async (page = 1) => {
     const params = { page }
     if (paymentFilter.value) params.status = paymentFilter.value
     const { data } = await api.get('/admin/payments', { params })
-    payments.value = data
+    payments.value = data?.data ? data : { data: Array.isArray(data) ? data : [], last_page: 1, current_page: 1 }
   } catch { /* silencioso */ }
 }
 
@@ -502,6 +519,22 @@ const disburse = async (srId) => {
   }
 }
 
+const dispersando = ref(false)
+const dispersandoId = ref(null)
+
+const dispersarTodos = async () => {
+  dispersando.value = true
+  disburseResult.value = null
+  try {
+    const { data } = await api.post('/admin/payouts/dispersar-todos')
+    disburseResult.value = { success: true, message: data.message }
+    await Promise.all([loadPending(), loadPayouts(), loadStats()])
+  } catch (e) {
+    disburseResult.value = { success: false, message: e.response?.data?.message ?? 'Error al dispersar' }
+  } finally {
+    dispersando.value = false
+  }
+}
 const simulatePayment = async () => {
   simulating.value = true
   simResult.value = null
@@ -514,6 +547,22 @@ const simulatePayment = async () => {
     simResult.value = { success: false, message: e.response?.data?.message ?? 'Error al simular' }
   } finally {
     simulating.value = false
+  }
+}
+
+const reintentando = ref(null)
+
+const reintentarFallidas = async (payoutId) => {
+  reintentando.value = payoutId
+  disburseResult.value = null
+  try {
+    const { data } = await api.post(`/admin/payouts/${payoutId}/reintentar`)
+    disburseResult.value = { success: data.success, message: data.message }
+    await Promise.all([loadPayouts(), loadStats()])
+  } catch (e) {
+    disburseResult.value = { success: false, message: e.response?.data?.message ?? 'Error al reintentar' }
+  } finally {
+    reintentando.value = null
   }
 }
 
