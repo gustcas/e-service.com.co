@@ -98,7 +98,9 @@ const initials = (name) =>
 
 const fmtTime = (d) => {
   if (!d) return ''
-  return new Date(d).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+  if (/^\d{2}:\d{2}$/.test(String(d))) return String(d)
+  const dt = new Date(String(d).replace(' ', 'T'))
+  return isNaN(dt.getTime()) ? '' : dt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
 }
 
 const scrollBottom = () => {

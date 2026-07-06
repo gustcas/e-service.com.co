@@ -48,7 +48,7 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <button class="relative w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center hover:bg-slate-100 transition">
+          <button @click="page = 'Notificaciones'" class="relative w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center hover:bg-slate-100 transition">
             <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="#64748b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
             </svg>
@@ -85,14 +85,13 @@
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
             <input v-model="search" type="text" placeholder="Buscar servicios..." class="flex-1 py-2.5 text-sm outline-none bg-transparent text-slate-700 placeholder-slate-400" />
-            <button class="bg-[#2563ff] text-white text-[13px] font-bold px-5 py-2 rounded-xl hover:bg-blue-700 transition flex-shrink-0">Buscar</button>
           </div>
 
           <!-- Categories -->
           <div>
             <div class="flex items-center justify-between mb-4">
               <span class="text-[15px] font-black text-[#0f172a]">Categorías populares</span>
-              <button class="text-[13px] text-[#2563ff] font-semibold hover:underline">Ver todas</button>
+              <button @click="showAllCats = !showAllCats" class="text-[13px] text-[#2563ff] font-semibold hover:underline">{{ showAllCats ? 'Ver menos' : 'Ver todas' }}</button>
             </div>
             <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
               <!-- Skeleton mientras cargan categorías -->
@@ -122,7 +121,7 @@
           <div>
             <div class="flex items-center justify-between mb-4">
               <span class="text-[15px] font-black text-[#0f172a]">Servicios recomendados para ti</span>
-              <button class="text-[13px] text-[#2563ff] font-semibold hover:underline">Ver más</button>
+              <button @click="showAllServices = !showAllServices" class="text-[13px] text-[#2563ff] font-semibold hover:underline">{{ showAllServices ? 'Ver menos' : 'Ver más' }}</button>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <!-- Skeleton mientras cargan servicios -->
@@ -139,7 +138,7 @@
               </template>
               <template v-else>
                 <div
-                  v-for="s in services" :key="s.id"
+                  <div v-for="s in showAllServices ? services : services.slice(0, 4)" :key="s.id"
                   @click="openServiceRequest(s)"
                   class="bg-white border border-slate-100 rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200 transition-all"
                 >
@@ -609,7 +608,6 @@
           <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <span class="font-black text-[#0f172a]">Historial de pagos</span>
-              <button class="text-[13px] font-semibold text-[#2563ff] border border-blue-200 px-4 py-1.5 rounded-xl hover:bg-blue-50 transition">Descargar PDF</button>
             </div>
             <!-- Mobile cards (< md) -->
             <div class="md:hidden divide-y divide-slate-50">
@@ -718,7 +716,10 @@
                   <p class="font-black text-[#0f172a]">{{ authStore.user?.name ?? 'Usuario' }}</p>
                   <p class="text-[12px] text-slate-400 mt-0.5">Cliente verificado ✓</p>
                 </div>
-                <button class="w-full border border-slate-200 text-[13px] font-semibold text-slate-600 py-2 rounded-xl hover:bg-slate-50 transition">Cambiar foto</button>
+                <label class="w-full border border-slate-200 text-[13px] font-semibold text-slate-600 py-2 rounded-xl hover:bg-slate-50 transition cursor-pointer text-center block">
+                  Cambiar foto
+                  <input type="file" accept="image/*" class="hidden" @change="uploadClientPhoto" />
+                </label>
               </div>
               <div class="bg-white border border-slate-100 rounded-2xl p-5 space-y-3">
                 <h3 class="font-black text-[#0f172a] text-[13px]">Notificaciones</h3>
@@ -827,7 +828,6 @@
             <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="#2563ff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
           </div>
         </div>
-        <button class="w-full mt-3 bg-blue-50 text-[#2563ff] text-[12px] font-bold py-2 rounded-xl hover:bg-blue-100 transition">Recargar saldo</button>
       </div>
       <div class="bg-white rounded-2xl shadow-sm px-5 py-4">
         <div class="flex items-center justify-between mb-3">
@@ -1707,6 +1707,8 @@ const today = new Date().toLocaleDateString('es-CO', { weekday:'long', year:'num
 const minParticipants = computed(() => selectedService.value?.form_type === 'certificacion_presencial' ? 4 : 1)
 const hasCycle = computed(() => ['certificacion_virtual', 'certificacion_presencial'].includes(selectedService.value?.form_type ?? ''))
 
+const showAllServices = ref(false)
+
 // ─── SVG paths ───────────────────────────────────────────────────────────────
 const SVG = {
   home:     `<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>`,
@@ -1782,10 +1784,11 @@ const allServices = ref([])
 const services        = ref([])
 const servicesLoading = ref(true)
 
+const showAllCats = ref(false)
 const filteredCats = computed(() => {
   const q = search.value.toLowerCase().trim()
   const all = q ? cats.value.filter(c => c.name.toLowerCase().includes(q)) : cats.value
-  return all.slice(0, 6)
+  return showAllCats.value ? all : all.slice(0, 6)
 })
 
 // ─── Requests page ───────────────────────────────────────────────────────────
@@ -1997,7 +2000,7 @@ const actaAvailable = (req) => {
 const actaCountdown = (req) => {
   if (!req.completed_at) return ''
   if (req.form_type === 'certificacion_virtual') return ''
-  const completedAt  = new Date(req.completed_at)
+  const completedAt  = new Date((req.completed_at ?? '').replace(' ', 'T'))
   const unlockAt     = new Date(completedAt.getTime() + 72 * 60 * 60 * 1000)
   const diffMs       = unlockAt.getTime() - Date.now()
   if (diffMs <= 0) return ''
@@ -2031,7 +2034,10 @@ let inlinePollTimer = null
 
 const fmtMsgTime = (d) => {
   if (!d) return ''
-  return new Date(d).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+  // Si ya viene como hora formateada "HH:mm", devolverla directamente
+  if (/^\d{2}:\d{2}$/.test(String(d))) return String(d)
+  const dt = new Date(String(d).replace(' ', 'T'))
+  return isNaN(dt.getTime()) ? '' : dt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
 }
 
 const scrollInlineToBottom = () => {
@@ -2098,7 +2104,7 @@ const loadConversations = async () => {
         initial: (r.professional?.name ?? r.professional_name ?? 'P')[0].toUpperCase(),
         color:   convColors[i % convColors.length],
         last:    r.last_message ?? '',
-        time:    r.last_message_at ? new Date(r.last_message_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : '',
+        time: r.last_message_at ? new Date(String(r.last_message_at).replace(' ','T')).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : '',
         unread:  r.unread_count ?? 0,
         serviceName: r.service_name ?? '',
       }))
@@ -2130,7 +2136,7 @@ const loadMessages = async (convId) => {
         id:   m.id,
         text: m.message ?? m.text ?? '',
         mine: m.sender_id === authStore.user?.id || m.is_mine,
-        time: m.created_at ? new Date(m.created_at).toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'}) : m.time ?? '',
+        time: m.created_at ? new Date(String(m.created_at).replace(' ','T')).toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'}) : m.time ?? '',
       }))
     }
   } catch { /* ignore — keep current messages */ }
@@ -2181,12 +2187,13 @@ const appLoading = ref(true)
 const notifs = reactive([])
 
 const _timeAgo = (iso) => {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000
+  if (!iso) return '—'
+  const diff = (Date.now() - new Date(String(iso).replace(' ', 'T')).getTime()) / 1000
   if (diff < 60)   return 'Hace un momento'
   if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`
   if (diff < 86400)return `Hace ${Math.floor(diff / 3600)} h`
   if (diff < 604800)return `Hace ${Math.floor(diff / 86400)} día${Math.floor(diff/86400)>1?'s':''}`
-  return new Date(iso).toLocaleDateString('es-CO', {day:'numeric',month:'short'})
+  const d2 = new Date(String(iso).replace(' ','T')); return isNaN(d2) ? '—' : d2.toLocaleDateString('es-CO', {day:'numeric',month:'short'})
 }
 
 const _notifIcon  = (type) => ({ new_message:'💬', payment:'💰', rating_reminder:'⭐', service_completed:'✅' })[type] ?? '🔔'
@@ -2592,6 +2599,17 @@ const submitRequest = async () => {
   } finally {
     submitting.value = false
   }
+}
+
+const uploadClientPhoto = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  const fd = new FormData()
+  fd.append('photo', file)
+  try {
+    const { data } = await api.post('/client/photo', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    if (data.success) showToast('Foto actualizada', 'success')
+  } catch { showToast('Error al subir foto', 'error') }
 }
 
 // ─── Wompi ────────────────────────────────────────────────────────────────────
@@ -3088,7 +3106,7 @@ const loadPayments = async () => {
           num:         String(p.id).padStart(4, '0'),
           service:     p.service_name ?? p.service?.name ?? '—',
           pro:         p.professional_name ?? p.professional?.name ?? '—',
-          date:        p.service_date ? new Date(p.service_date).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' }) : (p.updated_at ? new Date(p.updated_at).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' }) : '—'),
+          date: p.service_date ? new Date(p.service_date.replace(' ','T')).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' }) : (p.updated_at ? new Date(String(p.updated_at).replace(' ','T')).toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' }) : '—'),
           amount:      '$' + Number(p.budget ?? p.amount ?? 0).toLocaleString('es-CO'),
           amount_raw:  Number(p.budget ?? p.amount ?? 0),
           description: p.description ?? null,
@@ -3159,7 +3177,7 @@ onMounted(async () => {
           reviews:       0,
         }
       })
-     services.value = allServices.value.slice(0, 4)
+     services.value = allServices.value
       servicesLoading.value = false
     }
   } catch { /* keep defaults */ }
