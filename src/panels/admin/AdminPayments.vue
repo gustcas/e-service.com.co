@@ -346,7 +346,7 @@
           <table class="w-full text-sm min-w-[780px]">
             <thead class="bg-slate-50">
               <tr>
-                <th v-for="h in ['#','ID Servicio','Destinatario','Profesional','Monto','Método','Estado Wompi','Estado','Origen','Fecha','']" :key="h"
+                <th v-for="h in ['#','ID Servicio','Destinatario','Profesional','Monto bruto','Descuento','Neto','Método','Estado Wompi','Estado','Origen','Fecha','']" :key="h"
                   class="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ h }}</th>
               </tr>
             </thead>
@@ -370,6 +370,8 @@
                   <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.professional_name }}</td>
 
                 <td class="px-5 py-3 font-bold text-[13px] text-[#0f172a]">{{ p.amount_formatted }}</td>
+         <td class="px-5 py-3 text-[12px] text-red-500">-${{ Number(p.discount_amount ?? 0).toLocaleString('es-CO') }}</td>
+         <td class="px-5 py-3 font-bold text-[13px] text-emerald-600">${{ Number(p.net_amount ?? 0).toLocaleString('es-CO') }}</td>
                 <td class="px-5 py-3 text-[12px] text-slate-500">{{ methodLabel(p.payment_method) }}</td>
                 <td class="px-5 py-3">
                   <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
