@@ -858,19 +858,7 @@
                 {{ paySaving ? 'Guardando...' : 'Guardar cuenta bancaria' }}
               </button>
             </div>
-            <!-- Nequi -->
-            <div class="bg-white border border-slate-100 rounded-2xl p-6 space-y-4">
-              <h3 class="font-black text-[#0f172a]">Nequi</h3>
-              <div class="max-w-xs">
-                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Número de celular</label>
-                <input v-model="payForm.nequi_phone" type="tel" placeholder="+57 300 000 0000"
-                  class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-blue-400 transition bg-slate-50 focus:bg-white" />
-              </div>
-              <button @click="savePayData('nequi')" :disabled="paySaving"
-                class="bg-purple-600 text-white text-[13px] font-bold px-6 py-2.5 rounded-xl hover:bg-purple-700 transition disabled:opacity-60">
-                {{ paySaving ? 'Guardando...' : 'Guardar Nequi' }}
-              </button>
-            </div>
+            
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-[13px] text-amber-700">
               <span class="font-bold">⚠ Importante:</span> Asegúrate de que los datos sean correctos. Los pagos incorrectos pueden tardar varios días en revertirse.
             </div>
@@ -3050,36 +3038,23 @@ const banks = ref([
   {id:'agrario',      code:'BANCO_AGRARIO',         name:'Banco Agrario'},
 ])
 
-const savePayData = async (method = 'bank_transfer') => {
+const savePayData = async () => {
   paySaving.value = true
   try {
-    let payload
-    if (method === 'nequi' || method === 'daviplata') {
-      if (!payForm.nequi_phone) { showToast('Ingresa el número de celular', 'error'); paySaving.value = false; return }
-      payload = {
-        payment_method: method,
-        id_type:        'CC',
-        id_number:      payForm.account_id || '0',
-        full_name:      payForm.account_holder || fullName.value,
-        email:          authStore.user?.email ?? '',
-        account_number: payForm.nequi_phone,
-      }
-    } else {
-      if (!payForm.bank)           { showToast('Selecciona un banco', 'error'); paySaving.value = false; return }
-      if (!payForm.account_number) { showToast('Ingresa el número de cuenta', 'error'); paySaving.value = false; return }
-      const bankObj = typeof payForm.bank === 'object' ? payForm.bank : { id: String(payForm.bank), name: String(payForm.bank), code: '' }
-      payload = {
-        payment_method: 'bank_transfer',
-        id_type:        'CC',
-        id_number:      payForm.account_id || '0',
-        full_name:      payForm.account_holder || fullName.value,
-        email:          authStore.user?.email ?? '',
-        account_number: payForm.account_number,
-        bank_id:        bankObj.id,
-        bank_name:      bankObj.name,
-        bank_code:      bankObj.code ?? '',
-        account_type:   (payForm.account_type ?? 'ahorros').toUpperCase(),
-      }
+    if (!payForm.bank)           { showToast('Selecciona un banco', 'error'); paySaving.value = false; return }
+    if (!payForm.account_number) { showToast('Ingresa el número de cuenta', 'error'); paySaving.value = false; return }
+    const bankObj = typeof payForm.bank === 'object' ? payForm.bank : { id: String(payForm.bank), name: String(payForm.bank), code: '' }
+    const payload = {
+      payment_method: 'bank_transfer',
+      id_type:        'CC',
+      id_number:      payForm.account_id || '0',
+      full_name:      payForm.account_holder || fullName.value,
+      email:          authStore.user?.email ?? '',
+      account_number: payForm.account_number,
+      bank_id:        bankObj.id,
+      bank_name:      bankObj.name,
+      bank_code:      bankObj.code ?? '',
+      account_type:   (payForm.account_type ?? 'ahorros').toUpperCase(),
     }
     await api.post('/professional/payment-info', payload)
     showToast('Datos de pago guardados correctamente', 'success')
@@ -3295,17 +3270,15 @@ onMounted(async () => {
   await loadBanks()
 
   // Payment data
-  try {
+try {
     const { data } = await api.get('/professional/payment-info')
     const info = data?.payment_info ?? null
     if (info) {
-      const isNequi = info.payment_method === 'nequi' || info.payment_method === 'daviplata'
       payForm.bank           = banks.value.find(b => b.id === info.bank_id) ?? null
       payForm.account_type   = (info.account_type  ?? 'AHORROS').toLowerCase()
-      payForm.account_number = isNequi ? '' : (info.account_number ?? '')
+      payForm.account_number = info.account_number ?? ''
       payForm.account_holder = info.full_name  ?? ''
       payForm.account_id     = info.id_number  ?? ''
-      payForm.nequi_phone    = isNequi ? (info.account_number ?? '') : ''
     }
   } catch { /* ignore */ }
 
