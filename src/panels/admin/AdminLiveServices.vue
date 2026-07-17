@@ -1117,7 +1117,7 @@ const downloadEvidence = (ev) => {
 
 const adminDocList = (req) => {
   const ft = req.form_type ?? ''
-  const CERT_TYPES = ['certificacion_virtual', 'certificacion_presencial', 'virtual_participantes', 'presencial_participantes']
+  const CERT_TYPES = ['certificacion_virtual', 'certificacion_presencial']
   const isCert  = CERT_TYPES.includes(ft)
   const isSaneo = /saneamiento/i.test(req.category_name ?? req.service_name ?? '')
   const isPresencial = ft === 'certificacion_presencial' || ft === 'presencial_participantes'
